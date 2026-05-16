@@ -5,9 +5,9 @@ from typing import TypedDict
 class CompletionState(TypedDict):
     # Stage 1 输入/输出
     target_entity: dict
-    retrieved_context: list[dict]
-    schema_context: list[dict]
-    sibling_columns: list[dict]
+    retrieved_context: list[dict] | None
+    schema_context: list[dict] | None
+    sibling_columns: list[dict] | None
     # Stage 2 输出
     completion_result: dict | None
     # Stage 3 输出

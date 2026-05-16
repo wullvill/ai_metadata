@@ -1,14 +1,16 @@
 """LangGraph Pipeline 定义"""
+from typing import Optional
+
 from langgraph.graph import StateGraph, END
 from .state import CompletionState
 
 
 def create_completion_graph() -> StateGraph:
-    """创建元数据补全 Pipeline
+    """Assemble and compile the 4-stage metadata completion pipeline graph.
 
-    Lazy imports are used for stage modules to avoid import errors
-    until those modules are created in subsequent tasks.
+    Stages: retrieve -> generate -> quality_check -> (condition: review route).
     """
+    # Lazy imports: stage modules do not exist yet (created in subsequent tasks).
     from .stage1_retrieve import stage1_retrieve
     from .stage2_generate import stage2_generate
     from .stage3_quality import stage3_quality
@@ -39,7 +41,7 @@ def create_completion_graph() -> StateGraph:
 
 
 # Lazy initialization: do NOT instantiate at module level (stage modules don't exist yet).
-_pipeline = None
+_pipeline: Optional[StateGraph] = None
 
 
 def get_pipeline():
