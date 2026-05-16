@@ -1,0 +1,1 @@
+import{_ as n,a as o,c as r,o as t}from"./index-CpI9xi17.js";const a={};function c(s,e){return t(),o("div",null,[...e[0]||(e[0]=[r("h1",null,"Review Workbench",-1)])])}const _=n(a,[["render",c]]);export{_ as default};

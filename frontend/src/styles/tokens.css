@@ -1,0 +1,25 @@
+:root {
+  --color-primary: #0052d9;
+  --color-success: #00a870;
+  --color-warning: #ed7b2f;
+  --color-error: #e34d59;
+  --color-bg: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-text: #1d2129;
+  --color-text-secondary: #86909c;
+  --radius-base: 6px;
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
