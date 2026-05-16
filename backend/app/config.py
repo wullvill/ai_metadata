@@ -1,5 +1,5 @@
 """应用配置管理"""
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 
@@ -34,9 +34,7 @@ class Settings(BaseSettings):
     auto_approve_threshold: float = 0.80
     pending_review_threshold: float = 0.60
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 @lru_cache()
