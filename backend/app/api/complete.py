@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/v1/complete", tags=["complete"])
 @router.post("/trigger/manual", response_model=CompletionResponse)
 async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = Depends(get_db)):
     """手动触发元数据补全"""
-    target = req.target.model_dump()
+    target = req.target.model_dump(by_alias=True)
 
     pipeline = get_pipeline()
 
