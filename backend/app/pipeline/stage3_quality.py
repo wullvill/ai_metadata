@@ -5,6 +5,8 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+VALID_SENSITIVE_LEVELS = [None, "L1", "L2", "L3", "L4"]
+
 # ---- 规则引擎 ----
 
 RULES = {
@@ -24,7 +26,7 @@ RULES = {
         "message": "描述与中文名完全一致，描述应更详细",
     },
     "sensitive_level_valid": {
-        "check": lambda r, t: r.get("sensitive_level") in [None, "L1", "L2", "L3", "L4"],
+        "check": lambda r, t: r.get("sensitive_level") in VALID_SENSITIVE_LEVELS,
         "severity": "warning",
         "message": "敏感级别不在 L1-L4 范围内",
     },
@@ -52,7 +54,7 @@ RULES = {
 
 
 def calculate_adjusted_confidence(result: dict, target: dict) -> float:
-    """修正置信度得分"""
+    """Adjust LLM self-reported confidence using objective penalty factors: retrieval quality, description length, special characters, tag anomalies."""
     score = result.get("confidence", 0.5)
     penalties = []
 
@@ -84,7 +86,7 @@ def calculate_adjusted_confidence(result: dict, target: dict) -> float:
 
 
 def check_rules(result: dict, target: dict) -> list[dict]:
-    """执行规则引擎校验"""
+    """Run rule engine checks. Returns list of violation dicts with rule name, severity, and message."""
     violations = []
     for rule_name, rule in RULES.items():
         passed = rule["check"](result, target)
@@ -98,7 +100,7 @@ def check_rules(result: dict, target: dict) -> list[dict]:
 
 
 def check_conflict(result: dict, target: dict) -> list[dict]:
-    """检查与已有元数据的冲突"""
+    """Detect conflicts between completion result and existing metadata using text overlap and tag intersection."""
     conflicts = []
 
     # 描述重叠检测
@@ -126,7 +128,7 @@ def check_conflict(result: dict, target: dict) -> list[dict]:
 
 
 def decide_review_status(adjusted_confidence: float, violations: list[dict]) -> str:
-    """根据置信度和违规决定审核状态"""
+    """Route to auto_approved/pending_review/rejected based on adjusted confidence and violation severity."""
     has_critical = any(v["severity"] == "critical" for v in violations)
     has_warning = any(v["severity"] == "warning" for v in violations)
 
@@ -139,7 +141,7 @@ def decide_review_status(adjusted_confidence: float, violations: list[dict]) -> 
 
 
 def _text_overlap(text1: str, text2: str) -> float:
-    """简单文本重叠度计算（Jaccard）"""
+    """Compute Jaccard character-level overlap between two strings."""
     set1 = set(text1)
     set2 = set(text2)
     if not set1 or not set2:
