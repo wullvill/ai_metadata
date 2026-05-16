@@ -16,6 +16,10 @@ __pycache__/
 # Node
 node_modules/
 .vite/
+dist/
+
+# Binaries
+*.pptx
 
 # OS
 .DS_Store
