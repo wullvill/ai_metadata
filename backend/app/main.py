@@ -23,6 +23,14 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "ok"}
 
+    from app.api.search import router as search_router
+    from app.api.complete import router as complete_router
+    from app.api.review import router as review_router
+
+    app.include_router(search_router)
+    app.include_router(complete_router)
+    app.include_router(review_router)
+
     return app
 
 
