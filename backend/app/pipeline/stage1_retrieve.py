@@ -88,7 +88,11 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     # 字段级补全：额外获取同表兄弟字段
     sibling_columns = []
     if target["entity_type"] == "column" and target.get("column_name"):
-        sibling_columns = _get_sibling_columns(target)
+        sibling_future = loop.run_in_executor(
+            None,
+            lambda: _get_sibling_columns(target),
+        )
+        sibling_columns = await sibling_future
 
     state["retrieved_context"] = merged
     state["schema_context"] = schema_context or []
@@ -114,5 +118,6 @@ def _get_sibling_columns(target: dict) -> list[dict]:
             if s.get("table_name") == target["table_name"]
             and s.get("column_name") != target.get("column_name")
         ][:10]
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to retrieve sibling columns for {target.get('table_name', '?')}: {e}")
         return []
