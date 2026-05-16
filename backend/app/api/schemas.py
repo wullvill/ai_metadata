@@ -6,7 +6,7 @@ class TargetEntity(BaseModel):
     entity_id: str
     entity_type: str = Field(pattern="^(table|column)$")
     database: str
-    schema: str
+    schema_name: str = Field(alias="schema")
     table_name: str
     column_name: str | None = None
     data_type: str | None = None

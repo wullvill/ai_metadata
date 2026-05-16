@@ -1,1 +1,0 @@
-import{_ as n,a as o,c as t,o as r}from"./index-CpI9xi17.js";const s={};function a(c,e){return r(),o("div",null,[...e[0]||(e[0]=[t("h1",null,"System Config",-1)])])}const l=n(s,[["render",a]]);export{l as default};

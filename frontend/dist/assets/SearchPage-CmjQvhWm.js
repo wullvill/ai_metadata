@@ -1,1 +1,0 @@
-import{_ as a,a as r,c as t,o as c}from"./index-CpI9xi17.js";const n={};function o(s,e){return c(),r("div",null,[...e[0]||(e[0]=[t("h1",null,"Metadata Search",-1)])])}const _=a(n,[["render",o]]);export{_ as default};

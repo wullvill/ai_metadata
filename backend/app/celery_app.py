@@ -8,6 +8,7 @@ celery_app = Celery(
     "metadata_completion",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
+    include=["app.jobs.metadata_sync"],
 )
 
 celery_app.conf.update(
@@ -18,5 +19,8 @@ celery_app.conf.update(
     enable_utc=True,
     worker_pool="gevent",
     task_track_started=True,
+    # task_acks_late=True with gevent pool: all tasks share a single OS
+    # process via greenlets. If the process crashes, all unacknowledged tasks
+    # are re-delivered. Ensure every task registered here is idempotent.
     task_acks_late=True,
 )

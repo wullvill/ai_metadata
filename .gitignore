@@ -13,5 +13,9 @@ __pycache__/
 .idea/
 .superpowers/
 
+# Node
+node_modules/
+.vite/
+
 # OS
 .DS_Store

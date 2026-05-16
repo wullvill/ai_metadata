@@ -1,1 +1,0 @@
-import{_ as o,a as t,c as r,o as n}from"./index-CpI9xi17.js";const s={};function a(c,e){return n(),t("div",null,[...e[0]||(e[0]=[r("h1",null,"Completion History",-1)])])}const i=o(s,[["render",a]]);export{i as default};
