@@ -12,6 +12,9 @@ async def search_metadata(req: SearchRequest):
     results = search_all(
         query_text=req.query,
         entity_type=req.entity_type,
+        database=req.database,
+        schema_name=req.schema_name,
+        data_type=req.data_type,
         top_k=100,
     )
     # 分页

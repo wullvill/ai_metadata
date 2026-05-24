@@ -14,5 +14,7 @@ class CompletionState(TypedDict):
     quality_check: dict | None
     # Stage 4 输出
     review_status: str | None
+    # Stage 4 同步错误 (不阻塞 Pipeline)
+    sync_error: str | None
     # 错误信息
     error: str | None

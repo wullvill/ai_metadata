@@ -14,21 +14,23 @@ def create_completion_graph() -> StateGraph:
     from .stage1_retrieve import stage1_retrieve
     from .stage2_generate import stage2_generate
     from .stage3_quality import stage3_quality
-    from .stage4_sync import stage4_review_router
+    from .stage4_sync import stage4_review_router, stage4_sync
 
     graph = StateGraph(CompletionState)
 
     graph.add_node("retrieve", stage1_retrieve)
     graph.add_node("generate", stage2_generate)
     graph.add_node("quality_check", stage3_quality)
+    graph.add_node("sync", stage4_sync)
 
     graph.set_entry_point("retrieve")
     graph.add_edge("retrieve", "generate")
     graph.add_edge("generate", "quality_check")
+    graph.add_edge("quality_check", "sync")
 
     # Stage 4: 条件路由
     graph.add_conditional_edges(
-        "quality_check",
+        "sync",
         stage4_review_router,
         {
             "auto_approved": END,

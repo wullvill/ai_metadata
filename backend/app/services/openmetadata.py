@@ -33,7 +33,7 @@ class OpenMetadataClient:
             await self._client.aclose()
             self._client = None
 
-    @async_retry(max_retries=2, delay=2.0)
+    @async_retry(max_retries=3, delay=1.0, backoff=5.0)
     async def list_tables(
         self, database: str | None = None, limit: int = 100, offset: int = 0
     ) -> list[dict]:
@@ -47,7 +47,7 @@ class OpenMetadataClient:
         data = resp.json()
         return data.get("data", [])
 
-    @async_retry(max_retries=2, delay=2.0)
+    @async_retry(max_retries=3, delay=1.0, backoff=5.0)
     async def get_table(self, fqn: str) -> dict:
         """获取单个表详情（含字段）"""
         client = await self._get_client()
@@ -55,7 +55,7 @@ class OpenMetadataClient:
         resp.raise_for_status()
         return resp.json()
 
-    @async_retry(max_retries=2, delay=2.0)
+    @async_retry(max_retries=3, delay=1.0, backoff=5.0)
     async def patch_table(self, fqn: str, patch: list[dict]) -> dict:
         """JSON Patch 更新表元数据"""
         client = await self._get_client()
@@ -64,7 +64,7 @@ class OpenMetadataClient:
         logger.info(f"Patched table: {fqn}")
         return resp.json()
 
-    @async_retry(max_retries=2, delay=2.0)
+    @async_retry(max_retries=3, delay=1.0, backoff=5.0)
     async def patch_column(self, table_fqn: str, column_name: str, patch: list[dict]) -> dict:
         """JSON Patch 更新字段元数据"""
         client = await self._get_client()

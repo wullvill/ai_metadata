@@ -28,6 +28,9 @@ const detailVisible = ref(false)
 const currentRecordId = ref<string | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(20)
+const searchQuery = ref('')
+const confidenceMin = ref(0)
+const debounceTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 onMounted(() => loadQueue())
 
@@ -41,12 +44,42 @@ const statusFilterOptions = [
   { label: '人工驳回', value: 'human_rejected' },
 ]
 
-const entityTypeOptions = [
-  { label: '全部', value: '' },
+const typeChips = [
+  { label: '全部类型', value: '' },
   { label: '表', value: 'table' },
+  { label: '视图', value: 'view' },
   { label: '字段', value: 'column' },
 ]
 
+// Client-side post-filters (search, confidence, default column exclusion)
+const filteredRecords = computed(() => {
+  let list = records.value
+
+  // Default: exclude column (字段) records unless explicitly filtering for them
+  if (filters.entity_type !== 'column') {
+    list = list.filter(r => r.entity_type !== 'column')
+  }
+
+  // Search filter: entity_id, display_name, description, tags
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase().trim()
+    list = list.filter(r =>
+      r.entity_id.toLowerCase().includes(q) ||
+      (r.completion_result?.display_name || '').toLowerCase().includes(q) ||
+      (r.completion_result?.description || '').toLowerCase().includes(q) ||
+      (r.completion_result?.tags || []).join(' ').toLowerCase().includes(q)
+    )
+  }
+
+  // Confidence filter
+  if (confidenceMin.value > 0) {
+    list = list.filter(r => (r.completion_result?.confidence || 0) * 100 >= confidenceMin.value)
+  }
+
+  return list
+})
+
+// Server-side filter triggers
 watch(() => filters.status, () => handleRefresh())
 watch(() => filters.entity_type, () => handleRefresh())
 
@@ -55,10 +88,23 @@ function handleRefresh() {
   loadQueue(currentPage.value, pageSize.value)
 }
 
+function handleSearchChange() {
+  // Debounced client-side filtering only (no API call)
+  if (debounceTimer.value) clearTimeout(debounceTimer.value)
+  debounceTimer.value = setTimeout(() => {
+    // Client-side filter triggered by computed reactivity
+  }, 200)
+}
+
 async function handleViewDetail(record: ReviewRecord) {
   currentRecordId.value = record.id
   await loadDetail(record.id)
   detailVisible.value = true
+}
+
+function handleDetailRefresh() {
+  detailVisible.value = false
+  handleRefresh()
 }
 
 async function handleApprove(id: string) {
@@ -110,7 +156,6 @@ async function handleBatchReject() {
     MessagePlugin.warning('请先勾选要操作的记录')
     return
   }
-  // batchReject is not available in the current API; reject one by one as fallback
   try {
     for (const id of selectedIds.value) {
       await reject(id, '批量拒绝')
@@ -129,8 +174,10 @@ function handlePageChange(pageInfo: { current: number }) {
 }
 
 const pendingCount = computed(
-  () => records.value.filter((r) => r.review_status === 'pending_review').length,
+  () => filteredRecords.value.filter((r) => r.review_status === 'pending_review').length,
 )
+
+const filteredTotal = computed(() => filteredRecords.value.length)
 </script>
 
 <template>
@@ -170,33 +217,66 @@ const pendingCount = computed(
       </t-space>
     </div>
 
-    <div class="review-filters surface-card">
-      <t-select
-        v-model="filters.status"
-        :options="statusFilterOptions"
-        placeholder="审核状态"
-        clearable
-        size="small"
-        style="width: 140px"
-      />
-      <t-select
-        v-model="filters.entity_type"
-        :options="entityTypeOptions"
-        placeholder="实体类型"
-        clearable
-        size="small"
-        style="width: 120px"
-      />
-      <t-button size="small" variant="text" @click="handleRefresh()">
-        <t-icon name="refresh" />
-        刷新
-      </t-button>
-      <span class="filter-total">共 {{ total }} 条</span>
+    <!-- Search & Filter Bar -->
+    <div class="search-filter-bar surface-card">
+      <div class="search-row">
+        <t-input
+          v-model="searchQuery"
+          placeholder="搜索资产名称、描述、标签..."
+          clearable
+          size="medium"
+          class="search-input"
+          @change="handleSearchChange"
+        >
+          <template #prefix-icon>
+            <t-icon name="search" />
+          </template>
+        </t-input>
+        <span class="stat-label">共 {{ filteredTotal }} 条</span>
+      </div>
+      <div class="filter-row">
+        <t-select
+          v-model="filters.status"
+          :options="statusFilterOptions"
+          placeholder="审核状态"
+          clearable
+          size="small"
+          style="width: 130px"
+        />
+        <t-radio-group
+          v-model="filters.entity_type"
+          variant="default-filled"
+          size="small"
+        >
+          <t-radio-button
+            v-for="chip in typeChips"
+            :key="chip.value"
+            :value="chip.value"
+          >
+            {{ chip.label }}
+          </t-radio-button>
+        </t-radio-group>
+        <div class="confidence-filter">
+          <span class="conf-label">置信度 >= {{ confidenceMin }}%</span>
+          <t-slider
+            v-model="confidenceMin"
+            :min="0"
+            :max="100"
+            :step="5"
+            style="width: 120px"
+          />
+        </div>
+        <t-button size="small" variant="text" @click="handleRefresh()">
+          <t-icon name="refresh" />
+          刷新
+        </t-button>
+      </div>
     </div>
 
+    <!-- Table -->
     <div class="review-table">
       <ReviewQueue
-        :records="records"
+        :records="filteredRecords"
         :loading="loading"
         @update:selected-ids="(ids: string[]) => selectedIds = ids"
         @select="handleViewDetail"
@@ -205,7 +285,8 @@ const pendingCount = computed(
       />
     </div>
 
-    <div v-if="total > pageSize" style="display: flex; justify-content: center; margin-top: 24px">
+    <!-- Pagination -->
+    <div v-if="total > pageSize" class="pagination-wrap">
       <t-pagination
         :current="currentPage"
         :total="total"
@@ -215,11 +296,13 @@ const pendingCount = computed(
       />
     </div>
 
+    <!-- Detail Dialog -->
     <ReviewDetail
       v-if="detail"
       :visible="detailVisible"
       :detail="detail"
       @close="detailVisible = false"
+      @refresh="handleDetailRefresh"
     />
   </div>
 </template>
@@ -242,6 +325,7 @@ const pendingCount = computed(
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-text);
+  margin: 0;
 }
 
 .page-subtitle {
@@ -250,27 +334,86 @@ const pendingCount = computed(
   margin-top: 4px;
 }
 
-.review-filters {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+/* Search & Filter Bar */
+.search-filter-bar {
   margin-bottom: 24px;
-  padding: 16px 24px;
-  flex-wrap: wrap;
+  padding: 12px 16px;
   background: var(--color-surface);
   border-radius: var(--radius-base);
   box-shadow: var(--shadow-card);
 }
 
-.filter-total {
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.search-input {
+  flex: 1;
+  max-width: 480px;
+}
+
+.stat-label {
   margin-left: auto;
   font-size: 0.875rem;
   color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.confidence-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.conf-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  min-width: 90px;
 }
 
 .review-table {
   background: var(--color-surface);
   border-radius: var(--radius-base);
   box-shadow: var(--shadow-card);
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .filter-row {
+    gap: 8px;
+  }
+
+  .confidence-filter {
+    width: 100%;
+  }
+
+  .confidence-filter .conf-label {
+    min-width: auto;
+  }
 }
 </style>

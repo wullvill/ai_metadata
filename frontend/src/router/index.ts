@@ -24,6 +24,16 @@ const router = createRouter({
       component: () => import('../pages/HistoryPage.vue'),
     },
     {
+      path: '/asset/:id',
+      name: 'asset-detail',
+      component: () => import('../pages/AssetDetailPage.vue'),
+    },
+    {
+      path: '/review/:id',
+      name: 'review-detail',
+      component: () => import('../pages/ReviewDetailPage.vue'),
+    },
+    {
       path: '/config',
       name: 'config',
       component: () => import('../pages/ConfigPage.vue'),

@@ -100,6 +100,38 @@ def _build_column_prompt(target: dict, state: CompletionState) -> str:
     )
 
 
+def _invoke_and_parse(llm, prompt: str) -> dict:
+    """Invoke LLM and parse JSON response. Raises ValueError on parse failure."""
+    response = llm.invoke([HumanMessage(content=prompt)])
+    return parse_llm_json(response.content)
+
+
+def _build_completion_result(result: dict, target_entity_id: str, entity_type: str, model_name: str) -> dict:
+    """Build the completion_result dict with confidence penalty for missing fields."""
+    missing_penalty = 0.0
+    if not result.get("display_name"):
+        missing_penalty += 0.1
+    if not result.get("description"):
+        missing_penalty += 0.1
+
+    confidence = result.get("confidence", 0.5)
+    confidence = max(0.0, min(1.0, confidence - missing_penalty))
+
+    return {
+        "target_entity_id": target_entity_id,
+        "entity_type": entity_type,
+        "display_name": result.get("display_name") or "",
+        "description": result.get("description") or "",
+        "tags": result.get("tags") or [],
+        "business_domain": result.get("business_domain"),
+        "sensitive_level": result.get("sensitive_level"),
+        "confidence": confidence,
+        "reasoning": result.get("reasoning", ""),
+        "model_used": model_name,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 async def stage2_generate(state: CompletionState) -> CompletionState:
     """Stage 2: LLM 生成补全建议"""
     if state.get("error"):
@@ -123,33 +155,25 @@ async def stage2_generate(state: CompletionState) -> CompletionState:
         prompt = _build_column_prompt(target, state)
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
-        result = parse_llm_json(response.content)
+        try:
+            result = _invoke_and_parse(llm, prompt)
+        except ValueError as parse_err:
+            logger.warning(f"Stage 2 JSON parse failed, retrying LLM call once: {parse_err}")
+            try:
+                result = _invoke_and_parse(llm, prompt)
+            except ValueError as retry_parse_err:
+                logger.error(f"Stage 2 retry also failed to parse JSON: {retry_parse_err}")
+                state["error"] = f"JSON parse failure after retry: {retry_parse_err}"
+                state["completion_result"] = None
+                return state
 
-        # 修正字段缺失：缺失字段降权
-        missing_penalty = 0.0
-        if not result.get("display_name"):
-            missing_penalty += 0.1
-        if not result.get("description"):
-            missing_penalty += 0.1
-
-        confidence = result.get("confidence", 0.5)
-        confidence = max(0.0, min(1.0, confidence - missing_penalty))
-
-        state["completion_result"] = {
-            "target_entity_id": target["entity_id"],
-            "entity_type": target["entity_type"],
-            "display_name": result.get("display_name") or "",
-            "description": result.get("description") or "",
-            "tags": result.get("tags") or [],
-            "business_domain": result.get("business_domain"),
-            "sensitive_level": result.get("sensitive_level"),
-            "confidence": confidence,
-            "reasoning": result.get("reasoning", ""),
-            "model_used": model_name,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-        }
-        logger.info(f"Stage 2 complete: model={model_name}, confidence={confidence:.2f}")
+        state["completion_result"] = _build_completion_result(
+            result, target["entity_id"], target["entity_type"], model_name
+        )
+        logger.info(
+            f"Stage 2 complete: model={model_name}, "
+            f"confidence={state['completion_result']['confidence']:.2f}"
+        )
     except Exception as e:
         logger.error(f"Stage 2 failed: {e}")
         state["error"] = str(e)

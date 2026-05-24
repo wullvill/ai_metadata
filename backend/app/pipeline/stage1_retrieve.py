@@ -78,15 +78,51 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
         ),
     )
 
-    milvus_results = await milvus_future
-    es_results = await es_future
-    schema_context = await siblings_future
+    # 带降级处理的检索结果获取
+    milvus_results: list[dict] = []
+    es_results: list[dict] = []
+    milvus_ok = False
+    es_ok = False
 
-    # RRF 合并
-    merged = rrf_merge(milvus_results, es_results, top_n=15)
+    try:
+        milvus_results = await milvus_future
+        milvus_ok = True
+    except Exception as e:
+        logger.warning(f"Milvus 检索失败，降级到 ES-only: {e}")
+
+    try:
+        es_results = await es_future
+        es_ok = True
+    except Exception as e:
+        logger.warning(f"ES 检索失败，降级到 Milvus-only: {e}")
+
+    try:
+        schema_context = await siblings_future
+    except Exception as e:
+        logger.warning(f"ES siblings 检索失败: {e}")
+        schema_context = []
+
+    # 两路均不可用，返回错误
+    if not milvus_ok and not es_ok:
+        state["error"] = "双路检索均不可用"
+        state["retrieved_context"] = []
+        state["schema_context"] = schema_context or []
+        state["sibling_columns"] = []
+        logger.error("Stage 1 failed: 双路检索均不可用")
+        return state
+
+    # RRF 合并或单路降级
+    if milvus_ok and es_ok:
+        merged = rrf_merge(milvus_results, es_results, top_n=15)
+    elif milvus_ok:
+        merged = [{**item, "source": "milvus"} for item in milvus_results[:15]]
+        logger.info("Stage 1 fallback: Milvus-only retrieval (ES unavailable)")
+    else:
+        merged = [{**item, "source": "es"} for item in es_results[:15]]
+        logger.info("Stage 1 fallback: ES-only retrieval (Milvus unavailable)")
 
     # 字段级补全：额外获取同表兄弟字段
-    sibling_columns = []
+    sibling_columns: list[dict] = []
     if target["entity_type"] == "column" and target.get("column_name"):
         sibling_future = loop.run_in_executor(
             None,
@@ -98,9 +134,13 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     state["schema_context"] = schema_context or []
     state["sibling_columns"] = sibling_columns
 
+    retrieved_count = len(milvus_results) + len(es_results) if (milvus_ok and es_ok) else (
+        len(milvus_results) if milvus_ok else len(es_results)
+    )
     logger.info(
-        f"Stage 1 complete: {len(merged)} results "
-        f"(milvus={len(milvus_results)}, es={len(es_results)})"
+        f"Stage 1 complete: {len(merged)} merged results "
+        f"(milvus={'ok' if milvus_ok else 'down'}, es={'ok' if es_ok else 'down'}, "
+        f"raw_total={retrieved_count})"
     )
     return state
 

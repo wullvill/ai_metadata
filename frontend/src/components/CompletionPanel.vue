@@ -25,7 +25,7 @@
       </div>
       <div v-if="result.business_domain" class="field-row">
         <span class="field-label">业务域</span>
-        <span class="field-value">{{ result.business_domain }}</span>
+        <t-tag :theme="domainTheme" size="small">{{ result.business_domain }}</t-tag>
       </div>
       <div v-if="result.sensitive_level" class="field-row">
         <span class="field-label">敏感级别</span>
@@ -41,10 +41,19 @@
       </div>
     </div>
   </t-card>
+
+  <t-dialog
+    v-model:visible="dialogVisible"
+    header="确认补全"
+    :on-confirm="handleConfirm"
+    :on-cancel="handleCancel"
+  >
+    <p>{{ confirmMessage }}</p>
+  </t-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import QualityBadge from './QualityBadge.vue'
 import type { CompletionResult, QualityCheck } from '../api/types'
 
@@ -55,7 +64,43 @@ const props = defineProps<{
   error: string | null
 }>()
 
+const emit = defineEmits<{
+  confirm: []
+}>()
+
+const dialogVisible = ref(false)
+const confirmMessage = computed(() => {
+  if (!props.result) return '确定要触发 AI 补全吗？'
+  return `确定要对「${props.result.display_name}」触发 AI 补全吗？补全后的元数据将自动进行质量校验。`
+})
+
+function handleConfirm() {
+  dialogVisible.value = false
+  emit('confirm')
+}
+
+function handleCancel() {
+  dialogVisible.value = false
+}
+
+function openConfirm() {
+  dialogVisible.value = true
+}
+
+defineExpose({ openConfirm })
+
 const qualityStatus = computed(() => props.qualityCheck?.review_status || 'pending_review')
+
+const domainTheme = computed(() => {
+  if (!props.result?.business_domain) return 'default'
+  const domainMap: Record<string, string> = {
+    '金融': 'primary',
+    '营销': 'success',
+    '风控': 'warning',
+    '运维': 'default',
+  }
+  return domainMap[props.result.business_domain] || 'default'
+})
 
 const sensitiveTheme = computed(() => {
   switch (props.result?.sensitive_level) {

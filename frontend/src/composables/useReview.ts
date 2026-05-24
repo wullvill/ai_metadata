@@ -24,6 +24,7 @@ export function useReview() {
         page_size: pageSize,
       })
       records.value = res.data || []
+      total.value = res.meta?.total || 0
     } catch (e: any) {
       error.value = e.message || '加载审核队列失败'
     } finally {

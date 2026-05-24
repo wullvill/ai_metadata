@@ -28,7 +28,7 @@ export async function getReviewQueue(params: {
   status?: string
   page?: number
   page_size?: number
-}): Promise<{ success: boolean; data: ReviewRecord[] }> {
+}): Promise<{ success: boolean; data: ReviewRecord[]; meta?: { total: number; page: number; page_size: number } }> {
   const { data } = await api.get('/review/queue', { params })
   return data
 }
@@ -50,6 +50,15 @@ export async function rejectReview(recordId: string, comment: string): Promise<{
 
 export async function batchApprove(recordIds: string[]): Promise<{ success: boolean; data: { count: number } }> {
   const { data } = await api.post('/review/batch/approve', recordIds)
+  return data
+}
+
+export async function modifyReview(recordId: string, payload: {
+  display_name?: string
+  description?: string
+  tags?: string[]
+}): Promise<{ success: boolean }> {
+  const { data } = await api.post(`/review/${recordId}/modify`, payload)
   return data
 }
 

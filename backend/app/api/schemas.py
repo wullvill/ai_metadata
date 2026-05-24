@@ -38,10 +38,20 @@ class CompletionResponse(BaseModel):
 class ReviewActionRequest(BaseModel):
     comment: str | None = None
     modified_result: dict | None = None
+    reviewer: str | None = None
+
+
+class BatchRejectRequest(BaseModel):
+    record_ids: list[str]
+    reason: str = Field(min_length=1)
+    reviewer: str | None = None
 
 
 class SearchRequest(BaseModel):
     query: str
     entity_type: str | None = None
+    database: str | None = None
+    schema_name: str | None = Field(default=None, alias="schema")
+    data_type: str | None = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)

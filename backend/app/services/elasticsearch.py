@@ -118,13 +118,26 @@ def search_siblings(database: str, schema_name: str, entity_type: str, top_k: in
     ]
 
 
-def search_all(query_text: str, entity_type: str | None = None, top_k: int = 20) -> list[dict]:
+def search_all(
+    query_text: str,
+    entity_type: str | None = None,
+    database: str | None = None,
+    schema_name: str | None = None,
+    data_type: str | None = None,
+    top_k: int = 20,
+) -> list[dict]:
     """通用搜索（用于前端搜索页）"""
     es = get_es_client()
 
     must = []
     if entity_type:
         must.append({"term": {"entity_type": entity_type}})
+    if database:
+        must.append({"term": {"database": database}})
+    if schema_name:
+        must.append({"term": {"schema_name": schema_name}})
+    if data_type:
+        must.append({"term": {"data_type": data_type}})
 
     body = {
         "query": {
@@ -139,11 +152,27 @@ def search_all(query_text: str, entity_type: str | None = None, top_k: int = 20)
                 ],
             }
         },
+        "highlight": {
+            "fields": {
+                "table_name": {},
+                "column_name": {},
+                "display_name": {},
+                "description": {},
+            },
+            "pre_tags": ["<mark>"],
+            "post_tags": ["</mark>"],
+        },
         "size": top_k,
     }
 
     resp = es.search(index=INDEX_NAME, body=body)
-    return [hit["_source"] for hit in resp["hits"]["hits"]]
+    return [
+        {
+            **hit["_source"],
+            "highlight": hit.get("highlight", {}),
+        }
+        for hit in resp["hits"]["hits"]
+    ]
 
 
 def index_documents(docs: list[dict]) -> None:
