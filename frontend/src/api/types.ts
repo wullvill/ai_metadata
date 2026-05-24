@@ -115,3 +115,9 @@ export interface HistoryParams {
   page?: number
   limit?: number
 }
+
+export interface FilterOptions {
+  systems: string[]
+  databases: string[]
+  schemas: string[]
+}

@@ -13,6 +13,17 @@ const api = axios.create({
   timeout: 120000,
 })
 
+export interface FilterOptions {
+  systems: string[]
+  databases: string[]
+  schemas: string[]
+}
+
+export async function getFilterOptions(): Promise<{ success: boolean; data: FilterOptions }> {
+  const { data } = await api.get('/search/filters')
+  return data
+}
+
 export async function searchMetadata(params: SearchParams): Promise<SearchResponse> {
   const { data } = await api.post('/search', params)
   return data

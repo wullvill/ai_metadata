@@ -16,8 +16,8 @@ MAPPINGS = {
         "schema_name": {"type": "keyword"},
         "table_name": {"type": "text", "fields": {"raw": {"type": "keyword"}}},
         "column_name": {"type": "text", "fields": {"raw": {"type": "keyword"}}},
-        "display_name": {"type": "text", "analyzer": "ik_max_word"},
-        "description": {"type": "text", "analyzer": "ik_max_word"},
+        "display_name": {"type": "text"},
+        "description": {"type": "text"},
         "data_type": {"type": "keyword"},
         "tags": {"type": "keyword"},
         "has_description": {"type": "boolean"},
@@ -26,7 +26,7 @@ MAPPINGS = {
 
 
 def get_es_client() -> Elasticsearch:
-    return Elasticsearch(settings.es_host)
+    return Elasticsearch(settings.es_host, basic_auth=(settings.es_user, settings.es_password))
 
 
 def ensure_index() -> None:
@@ -173,6 +173,25 @@ def search_all(
         }
         for hit in resp["hits"]["hits"]
     ]
+
+
+def get_filter_options() -> dict[str, list[str]]:
+    """获取 system/database/schema 的全部 distinct 值"""
+    es = get_es_client()
+    body = {
+        "size": 0,
+        "aggs": {
+            "systems": {"terms": {"field": "database", "size": 100}},
+            "schemas": {"terms": {"field": "schema_name", "size": 100}},
+        },
+    }
+    resp = es.search(index=INDEX_NAME, body=body)
+    aggs = resp["aggregations"]
+    return {
+        "systems": [b["key"] for b in aggs["systems"]["buckets"]],
+        "databases": [b["key"] for b in aggs["systems"]["buckets"]],
+        "schemas": [b["key"] for b in aggs["schemas"]["buckets"]],
+    }
 
 
 def index_documents(docs: list[dict]) -> None:

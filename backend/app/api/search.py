@@ -1,9 +1,16 @@
 """元数据搜索 API"""
 from fastapi import APIRouter
-from app.services.elasticsearch import search_all
+from app.services.elasticsearch import search_all, get_filter_options
 from app.api.schemas import SearchRequest
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
+
+
+@router.get("/filters")
+async def get_filters():
+    """获取检索过滤选项（系统/库/Schema 的全部可选值）"""
+    options = get_filter_options()
+    return {"success": True, "data": options}
 
 
 @router.post("")

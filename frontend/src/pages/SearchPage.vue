@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import type { TableProps, SortInfo } from 'tdesign-vue-next'
 import { useSearch } from '../composables/useSearch'
 import { useCompletion } from '../composables/useCompletion'
-import type { MetadataEntity, TargetEntity } from '../api/types'
+import { getFilterOptions } from '../api'
+import type { MetadataEntity, TargetEntity, FilterOptions } from '../api/types'
 
 // ── Local extended type for fields the backend may return ──
 interface AssetDisplay extends MetadataEntity {
@@ -88,29 +89,15 @@ const COMPLETION_OPTIONS = [
   { label: '已完成', value: 'completed' },
 ]
 
+	// API-loaded filter options
+	const apiFilterOpts = ref<FilterOptions>({ systems: [], databases: [], schemas: [] })
+
 // ── Derived filter options from results ──
 const resultsAsDisplay = computed(() => results.value as AssetDisplay[])
 
-const systemOptions = computed(() => {
-  const set = new Set<string>()
-  results.value.forEach(r => {
-    const s = (r as AssetDisplay).system
-    if (s) set.add(s)
-  })
-  return Array.from(set).sort()
-})
-
-const databaseOptions = computed(() => {
-  const set = new Set<string>()
-  results.value.forEach(r => { if (r.database) set.add(r.database) })
-  return Array.from(set).sort()
-})
-
-const schemaOptions = computed(() => {
-  const set = new Set<string>()
-  results.value.forEach(r => { if (r.schema) set.add(r.schema) })
-  return Array.from(set).sort()
-})
+const systemOptions = computed(() => apiFilterOpts.value.systems.length ? apiFilterOpts.value.systems : [])
+const databaseOptions = computed(() => apiFilterOpts.value.databases.length ? apiFilterOpts.value.databases : [])
+const schemaOptions = computed(() => apiFilterOpts.value.schemas.length ? apiFilterOpts.value.schemas : [])
 
 const allDomainOptions = computed(() => {
   const set = new Set<string>()
@@ -345,6 +332,16 @@ function handlePageChange(pageInfo: { current: number }) {
 
 // ── Watchers: instant search (no debounce) ──
 watch(() => filters.query, () => {
+  search()
+})
+
+// ── Init: load filter options and trigger initial search ──
+onMounted(async () => {
+  try {
+    const res = await getFilterOptions()
+    if (res.success)
+      apiFilterOpts.value = res.data
+  } catch { /* keep defaults */ }
   search()
 })
 </script>
@@ -614,8 +611,8 @@ watch(() => filters.query, () => {
           <!-- Empty State -->
           <template #empty>
             <div class="empty-state">
-              <t-icon name="search" size="48px" />
-              <p>输入关键词开始搜索元数据</p>
+              <t-icon :name="searchQuery ? 'file-unknown' : 'search'" size="48px" />
+              <p>{{ searchQuery ? '没有匹配的元数据资产' : '输入关键词开始搜索元数据' }}</p>
             </div>
           </template>
         </t-table>

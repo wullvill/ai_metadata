@@ -19,11 +19,6 @@ export function useSearch() {
   })
 
   async function search() {
-    if (!filters.query.trim()) {
-      results.value = []
-      total.value = 0
-      return
-    }
     loading.value = true
     error.value = null
     try {
