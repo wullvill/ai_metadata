@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资产详情 — MetaGraph</title>
+<style>
+/* ── Design tokens ── */
+:root {
+  --bg:      oklch(99% 0.002 240);
+  --surface: oklch(100% 0 0);
+  --fg:      oklch(18% 0.012 250);
+  --muted:   oklch(54% 0.012 250);
+  --border:  oklch(92% 0.005 250);
+  --accent:  oklch(58% 0.18 255);
+  --accent-soft: oklch(58% 0.18 255 / 0.08);
+  --success: oklch(62% 0.16 145);
+  --warn:    oklch(72% 0.15 75);
+
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --max-width: 960px;
+  --nav-height: 56px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+  height: 100%;
+  display: flex; flex-direction: column;
+}
+
+/* ── Nav ── */
+.nav {
+  flex-shrink: 0;
+  position: sticky; top: 0; z-index: 100;
+  background: oklch(99% 0.002 240 / 0.82);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  height: var(--nav-height);
+  display: flex; align-items: center;
+}
+.nav-inner {
+  max-width: var(--max-width); width: 100%; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 16px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  letter-spacing: -0.01em; color: var(--fg); text-decoration: none;
+}
+.nav-logo svg { color: var(--accent); }
+.nav-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  text-decoration: none; border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.nav-back:hover { color: var(--fg); border-color: var(--fg); }
+
+/* ── Main layout: two zones ── */
+.main {
+  flex: 1; display: flex; flex-direction: column;
+  max-width: var(--max-width); width: 100%; margin: 0 auto;
+  padding: 0 24px; min-height: 0;
+}
+
+/* ── Top zone: compact asset header ── */
+.top-zone {
+  flex-shrink: 0;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.top-zone .breadcrumb {
+  font-size: 12px; color: var(--muted); margin-bottom: 4px;
+}
+.top-zone .breadcrumb a { color: var(--accent); text-decoration: none; }
+.top-zone .breadcrumb a:hover { text-decoration: underline; }
+.top-zone .asset-name {
+  font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+  letter-spacing: -0.01em; margin-bottom: 4px;
+}
+.top-zone .asset-subtitle {
+  font-size: 13px; color: var(--muted); font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+.top-zone .asset-desc {
+  font-size: 14px; line-height: 1.6; color: var(--fg);
+  margin-bottom: 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.top-zone .badge-row {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+
+/* ── Bottom zone: tabbed detail ── */
+.bottom-zone {
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0; padding-bottom: 32px;
+}
+.tab-bar {
+  flex-shrink: 0;
+  display: flex; gap: 0;
+  border-bottom: 2px solid var(--border);
+  padding-top: 12px;
+}
+.tab-btn {
+  padding: 8px 20px; font-size: 14px; font-weight: 500;
+  color: var(--muted); cursor: pointer;
+  border: none; background: none;
+  font-family: var(--font-body);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+}
+.tab-btn:hover { color: var(--fg); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-panel {
+  flex: 1; overflow-y: auto; min-height: 0;
+  padding-top: 20px;
+  display: none;
+}
+.tab-panel.active { display: block; }
+
+/* ── Tags ── */
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.tag-blue { background: oklch(58% 0.18 255 / 0.1); color: var(--accent); }
+.tag-green { background: oklch(62% 0.16 145 / 0.1); color: var(--success); }
+.tag-amber { background: oklch(72% 0.15 75 / 0.12); color: oklch(55% 0.13 70); }
+.tag-slate { background: oklch(54% 0.012 250 / 0.08); color: var(--muted); }
+
+/* ── Tab 1: detail rows ── */
+.info-section-title {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px; margin-top: 24px;
+}
+.info-section-title:first-child { margin-top: 0; }
+.detail-list {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.detail-row {
+  display: flex; padding: 12px 20px; border-bottom: 1px solid var(--border);
+  font-size: 14px; background: var(--surface); align-items: baseline;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label { width: 110px; color: var(--muted); flex-shrink: 0; font-size: 13px; }
+.detail-value { flex: 1; font-size: 14px; color: var(--fg); font-weight: 500; }
+.detail-value.mono { font-family: var(--font-mono); font-size: 13px; }
+
+.tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: none; text-decoration: none; transition: all 0.15s;
+  font-family: var(--font-body);
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+
+/* ── Tab 2: columns table ── */
+.cols-table-wrap {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.cols-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; table-layout: auto;
+}
+.cols-table thead { position: sticky; top: 0; z-index: 1; }
+.cols-table th {
+  background: oklch(97% 0.003 250);
+  padding: 10px 14px; text-align: left;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.cols-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: top; line-height: 1.5;
+}
+.cols-table tbody tr:last-child td { border-bottom: none; }
+.cols-table tbody tr:hover { background: oklch(58% 0.18 255 / 0.02); }
+
+.cols-table .col-name {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--fg);
+}
+.cols-table .col-type {
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  background: oklch(54% 0.012 250 / 0.06); padding: 2px 6px; border-radius: 3px;
+  white-space: nowrap;
+}
+.cols-table .cell-desc {
+  font-size: 13px; color: var(--fg); max-width: 200px;
+}
+.cols-table .cell-tags {
+  display: flex; flex-wrap: wrap; gap: 3px;
+}
+.cols-table .cell-time {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap;
+}
+.cols-table .cell-empty {
+  color: var(--muted); font-style: italic; font-size: 12px;
+}
+
+/* ── Empty state for no columns ── */
+.empty-state {
+  text-align: center; padding: 48px 24px; color: var(--muted);
+}
+.empty-state svg { opacity: 0.2; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* ── Error state ── */
+.error-state { text-align: center; padding: 80px 24px; color: var(--muted); flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.error-state svg { opacity: 0.3; margin-bottom: 16px; }
+.error-state h2 { font-size: 20px; margin-bottom: 8px; color: var(--fg); }
+.error-state p { font-size: 15px; margin-bottom: 24px; }
+
+@media (max-width: 640px) {
+  .detail-row { flex-direction: column; gap: 2px; padding: 10px 14px; }
+  .detail-label { width: auto; }
+  .top-zone .asset-name { font-size: 18px; }
+  .main { padding: 0 16px; }
+  .cols-table { font-size: 12px; }
+  .cols-table th, .cols-table td { padding: 8px 10px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="meta_search.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="11" width="7" height="10" rx="1"/></svg>
+      MetaGraph
+    </a>
+    <a class="nav-back" href="meta_search.html">← 返回资产目录</a>
+  </div>
+</nav>
+
+<main class="main" id="mainContent"></main>
+
+
+<script>
+const ASSETS = [
+  { id:"fact_trade",       name:"fact_trade",       type:"表",   system:"交易系统",   database:"ods_trade",    schema:"public", domain:"交易",   classification:"机密",   owner:"张明",   desc:"逐笔交易流水事实表，含成交价格、数量、方向、交易对手等核心字段，按交易日分区", tags:"交易,核心,分区表", lineage:true,  updated:"2026-05-18 08:30", completion:"completed",
+    columns:[
+      {name:"trade_id",type:"bigint",origDesc:"交易唯一标识，主键",origTag:"主键",compDesc:"交易ID，作为事实表主键，关联订单表与成交表，全局唯一",compTag:"主键,核心",compTime:"2026-05-18 08:30"},
+      {name:"product_code",type:"varchar(32)",origDesc:"产品代码",origTag:"维度",compDesc:"金融产品代码，关联dim_product.product_code，标识交易标的",compTag:"维度,外键",compTime:"2026-05-18 08:30"},
+      {name:"trade_date",type:"date",origDesc:"交易日期",origTag:"分区",compDesc:"交易发生日期，作为分区键，格式yyyy-MM-dd",compTag:"分区,日期",compTime:"2026-05-18 08:30"},
+      {name:"amount",type:"decimal(18,4)",origDesc:"成交金额",origTag:"指标",compDesc:"成交金额，以交易币种计价，含手续费",compTag:"指标,金额,核心",compTime:"2026-05-18 08:30"},
+      {name:"price",type:"decimal(18,6)",origDesc:"成交价格",origTag:"指标",compDesc:"单位成交价格，保留6位小数精度",compTag:"指标,价格",compTime:"2026-05-18 08:30"},
+      {name:"quantity",type:"decimal(18,2)",origDesc:"成交数量",origTag:"指标",compDesc:"成交数量（股/张/份），单位为产品基础单位",compTag:"指标,数量",compTime:"2026-05-18 08:30"},
+      {name:"direction",type:"varchar(4)",origDesc:"买卖方向",origTag:"维度",compDesc:"交易方向，B=买入 S=卖出",compTag:"维度,枚举",compTime:"2026-05-18 08:30"},
+      {name:"counterparty_id",type:"bigint",origDesc:"对手方ID",origTag:"维度",compDesc:"交易对手方标识，关联dim_counterparty.counterparty_id",compTag:"维度,外键",compTime:"2026-05-18 08:30"},
+      {name:"settle_date",type:"date",origDesc:"交收日期",origTag:"",compDesc:"资金交收日期，通常为T+1或T+2",compTag:"日期",compTime:"2026-05-18 08:30"},
+      {name:"trade_status",type:"varchar(16)",origDesc:"交易状态",origTag:"",compDesc:"交易生命周期状态：NEW/CONFIRMED/SETTLED/CANCELLED",compTag:"状态,枚举",compTime:"2026-05-18 08:30"},
+      {name:"created_at",type:"timestamp",origDesc:"创建时间",origTag:"",compDesc:"记录创建时间戳，系统自动生成",compTag:"审计",compTime:"2026-05-18 08:30"},
+      {name:"updated_at",type:"timestamp",origDesc:"更新时间",origTag:"",compDesc:"记录最后更新时间戳，系统自动维护",compTag:"审计",compTime:"2026-05-18 08:30"}
+    ]
+  },
+  { id:"fact_settlement",  name:"fact_settlement",  type:"表",   system:"清算系统",   database:"ods_settle",   schema:"public", domain:"清算",   classification:"机密",   owner:"陈芳",   desc:"结算流水表，记录每笔交易的清算状态、交收日期、结算金额及失败原因代码", tags:"清算,结算,核心", lineage:true,  updated:"2026-05-18 07:15", completion:"completed",
+    columns:[
+      {name:"settle_id",type:"bigint",origDesc:"结算流水ID",origTag:"主键",compDesc:"结算流水唯一标识，自增主键",compTag:"主键,核心",compTime:"2026-05-18 07:15"},
+      {name:"trade_id",type:"bigint",origDesc:"关联交易ID",origTag:"外键",compDesc:"关联fact_trade.trade_id，标识被结算的原始交易",compTag:"外键,关联",compTime:"2026-05-18 07:15"},
+      {name:"settle_amount",type:"decimal(18,4)",origDesc:"结算金额",origTag:"指标",compDesc:"实际结算金额，已扣除手续费与税费",compTag:"指标,金额",compTime:"2026-05-18 07:15"},
+      {name:"settle_date",type:"date",origDesc:"交收日期",origTag:"",compDesc:"资金实际交收日期，遵循各市场交收周期规则",compTag:"日期,核心",compTime:"2026-05-18 07:15"},
+      {name:"settle_status",type:"varchar(16)",origDesc:"结算状态",origTag:"",compDesc:"PENDING/SETTLED/FAILED，标识结算处理结果",compTag:"状态,枚举",compTime:"2026-05-18 07:15"},
+      {name:"fail_code",type:"varchar(8)",origDesc:"失败代码",origTag:"",compDesc:"结算失败原因代码：FUNDS/CREDIT/LIMIT/MANUAL",compTag:"枚举",compTime:"2026-05-18 07:15"},
+      {name:"currency",type:"varchar(3)",origDesc:"结算币种",origTag:"维度",compDesc:"ISO 4217 货币代码，CNY/USD/HKD等",compTag:"维度,枚举",compTime:"2026-05-18 07:15"},
+      {name:"settled_at",type:"timestamp",origDesc:"结算完成时间",origTag:"",compDesc:"资金到账确认时间戳",compTag:"审计",compTime:"2026-05-18 07:15"}
+    ]
+  },
+  { id:"dim_account",      name:"dim_account",      type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"客户",   classification:"机密",   owner:"王磊",   desc:"账户维度表，包含账户ID、账户类型、开户日期、所属机构、状态等基础属性", tags:"客户,维度,核心", lineage:true,  updated:"2026-05-17 22:40", completion:"completed",
+    columns:[
+      {name:"account_id",type:"bigint",origDesc:"账户ID，主键",origTag:"主键",compDesc:"账户唯一标识，全系统统一分配",compTag:"主键,核心",compTime:"2026-05-17 22:40"},
+      {name:"account_type",type:"varchar(16)",origDesc:"账户类型",origTag:"维度",compDesc:"CASD=现金账户/TRDG=交易账户/MRGN=保证金账户",compTag:"维度,枚举",compTime:"2026-05-17 22:40"},
+      {name:"org_id",type:"bigint",origDesc:"所属机构ID",origTag:"外键",compDesc:"关联dim_org.org_id，标识开户机构",compTag:"外键,维度",compTime:"2026-05-17 22:40"},
+      {name:"open_date",type:"date",origDesc:"开户日期",origTag:"",compDesc:"账户开立日期",compTag:"日期",compTime:"2026-05-17 22:40"},
+      {name:"status",type:"varchar(8)",origDesc:"账户状态",origTag:"",compDesc:"ACTIVE/DORMANT/CLOSED/FROZEN",compTag:"状态,枚举",compTime:"2026-05-17 22:40"},
+      {name:"currency",type:"varchar(3)",origDesc:"账户币种",origTag:"维度",compDesc:"ISO 4217 货币代码",compTag:"维度",compTime:"2026-05-17 22:40"}
+    ]
+  },
+  { id:"dim_counterparty", name:"dim_counterparty", type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"客户",   classification:"内部",   owner:"赵雪",   desc:"交易对手方维度表，记录机构名称、法人实体ID、信用评级、关联关系等", tags:"客户,对手方,维度", lineage:true,  updated:"2026-05-17 18:20", completion:"processing",
+    columns:[
+      {name:"counterparty_id",type:"bigint",origDesc:"对手方ID",origTag:"主键",compDesc:"交易对手方唯一标识",compTag:"主键",compTime:"2026-05-17 18:20"},
+      {name:"legal_name",type:"varchar(256)",origDesc:"法人全称",origTag:"",compDesc:"工商登记法人全称，用于合规与合同签署",compTag:"合规",compTime:"2026-05-17 18:20"},
+      {name:"lei",type:"varchar(20)",origDesc:"法人实体标识符",origTag:"",compDesc:"Legal Entity Identifier，全球法人识别编码",compTag:"合规,标识",compTime:"2026-05-17 18:20"},
+      {name:"credit_rating",type:"varchar(8)",origDesc:"信用评级",origTag:"维度",compDesc:"内部信用评级 AAA/AA/A/BBB/BB",compTag:"维度,风控",compTime:"2026-05-17 18:20"},
+      {name:"country",type:"varchar(3)",origDesc:"注册国家",origTag:"",compDesc:"ISO 3166-1 alpha-3 国家代码",compTag:"维度",compTime:"2026-05-17 18:20"},
+      {name:"parent_id",type:"bigint",origDesc:"母公司ID",origTag:"",compDesc:"母公司对手方ID，自引用外键，构建集团关系树",compTag:"外键,层级",compTime:"2026-05-17 18:20"},
+      {name:"status",type:"varchar(8)",origDesc:"状态",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ]
+  },
+  { id:"dim_product",      name:"dim_product",      type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"产品",   classification:"内部",   owner:"周岚",   desc:"金融产品维度表，含产品代码、类型、发行人、到期日、利率等属性", tags:"产品,维度", lineage:true,  updated:"2026-05-17 14:55", completion:"pending",
+    columns:[
+      {name:"product_code",type:"varchar(32)",origDesc:"产品代码",origTag:"主键",compDesc:"",compTag:"",compTime:""},
+      {name:"product_type",type:"varchar(16)",origDesc:"产品类型",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"issuer",type:"varchar(128)",origDesc:"发行人",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"maturity_date",type:"date",origDesc:"到期日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"coupon_rate",type:"decimal(8,6)",origDesc:"票面利率",origTag:"指标",compDesc:"",compTag:"",compTime:""},
+      {name:"isin",type:"varchar(12)",origDesc:"ISIN代码",origTag:"标识",compDesc:"",compTag:"",compTime:""},
+      {name:"status",type:"varchar(8)",origDesc:"产品状态",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ]
+  },
+  { id:"fact_market_data", name:"fact_market_data", type:"表",   system:"行情系统",   database:"ods_market",   schema:"public", domain:"行情",   classification:"公开",   owner:"林涛",   desc:"市场行情快照表，按分钟采集股票、债券、外汇的实时价格与指标数据", tags:"行情,市场,实时", lineage:true,  updated:"2026-05-18 09:00", completion:"completed",
+    columns:[
+      {name:"ticker",type:"varchar(16)",origDesc:"证券代码",origTag:"维度",compDesc:"交易所挂牌证券代码，如600000.SH",compTag:"维度,核心",compTime:"2026-05-18 09:00"},
+      {name:"snap_time",type:"timestamp",origDesc:"行情时间",origTag:"分区",compDesc:"行情快照时间戳，精确到分钟",compTag:"分区,时间",compTime:"2026-05-18 09:00"},
+      {name:"last_price",type:"decimal(18,6)",origDesc:"最新价",origTag:"指标",compDesc:"最新成交价格",compTag:"指标,价格",compTime:"2026-05-18 09:00"},
+      {name:"bid_price",type:"decimal(18,6)",origDesc:"买一价",origTag:"指标",compDesc:"最优买价（买一）",compTag:"指标",compTime:"2026-05-18 09:00"},
+      {name:"ask_price",type:"decimal(18,6)",origDesc:"卖一价",origTag:"指标",compDesc:"最优卖价（卖一）",compTag:"指标",compTime:"2026-05-18 09:00"},
+      {name:"volume",type:"bigint",origDesc:"成交量",origTag:"指标",compDesc:"当日累计成交量",compTag:"指标,数量",compTime:"2026-05-18 09:00"},
+      {name:"turnover",type:"decimal(20,2)",origDesc:"成交额",origTag:"指标",compDesc:"当日累计成交金额",compTag:"指标,金额",compTime:"2026-05-18 09:00"},
+      {name:"open_interest",type:"bigint",origDesc:"持仓量",origTag:"指标",compDesc:"未平仓合约数量（期货/期权适用）",compTag:"指标",compTime:"2026-05-18 09:00"}
+    ]
+  },
+  { id:"fact_risk_metric", name:"fact_risk_metric", type:"表",   system:"风控系统",   database:"dwd_risk",     schema:"risk",   domain:"风控",   classification:"机密",   owner:"黄立",   desc:"风险指标事实表，包含VaR、希腊字母、压力测试结果等风控核心度量", tags:"风控,VaR,核心", lineage:true,  updated:"2026-05-18 06:45", completion:"completed",
+    columns:[
+      {name:"risk_id",type:"bigint",origDesc:"风险记录ID",origTag:"主键",compDesc:"风险指标记录唯一标识",compTag:"主键",compTime:"2026-05-18 06:45"},
+      {name:"portfolio_id",type:"varchar(32)",origDesc:"组合ID",origTag:"维度",compDesc:"投资组合标识，关联组合主数据",compTag:"维度,外键",compTime:"2026-05-18 06:45"},
+      {name:"as_of_date",type:"date",origDesc:"风险日期",origTag:"分区",compDesc:"风险计量日期",compTag:"分区,日期",compTime:"2026-05-18 06:45"},
+      {name:"var_1d_95",type:"decimal(16,4)",origDesc:"1日95%VaR",origTag:"指标",compDesc:"1天持有期、95%置信度的在险价值",compTag:"指标,VaR,核心",compTime:"2026-05-18 06:45"},
+      {name:"var_1d_99",type:"decimal(16,4)",origDesc:"1日99%VaR",origTag:"指标",compDesc:"1天持有期、99%置信度的在险价值",compTag:"指标,VaR",compTime:"2026-05-18 06:45"},
+      {name:"expected_shortfall",type:"decimal(16,4)",origDesc:"预期亏损",origTag:"指标",compDesc:"条件在险价值（CVaR/ES），超过VaR的平均损失",compTag:"指标,ES",compTime:"2026-05-18 06:45"},
+      {name:"delta",type:"decimal(14,6)",origDesc:"Delta",origTag:"指标",compDesc:"一阶希腊字母，标的资产价格敏感度",compTag:"指标,希腊字母",compTime:"2026-05-18 06:45"},
+      {name:"gamma",type:"decimal(14,6)",origDesc:"Gamma",origTag:"指标",compDesc:"二阶希腊字母，Delta变化率",compTag:"指标,希腊字母",compTime:"2026-05-18 06:45"},
+      {name:"stress_loss",type:"decimal(16,4)",origDesc:"压力损失",origTag:"",compDesc:"极端情景下的最大潜在损失",compTag:"指标,压力测试",compTime:"2026-05-18 06:45"}
+    ]
+  },
+  { id:"dim_calendar",     name:"dim_calendar",     type:"表",   system:"公共系统",   database:"dwd_common",   schema:"md",     domain:"公共",   classification:"公开",   owner:"孙琪",   desc:"交易日历维度表，标注交易日、节假日、结算日、交割日等日期属性", tags:"公共,日历,维度", lineage:false, updated:"2026-05-16 10:00", completion:"pending",
+    columns:[
+      {name:"cal_date",type:"date",origDesc:"日历日期",origTag:"主键",compDesc:"",compTag:"",compTime:""},
+      {name:"is_trading_day",type:"boolean",origDesc:"是否交易日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"is_holiday",type:"boolean",origDesc:"是否节假日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"is_settle_day",type:"boolean",origDesc:"是否结算日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"market_code",type:"varchar(8)",origDesc:"市场代码",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"holiday_name",type:"varchar(64)",origDesc:"节假日名称",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ]
+  },
+  { id:"dim_org",          name:"dim_org",          type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"公共",   classification:"内部",   owner:"吴楠",   desc:"组织机构维度表，记录部门、团队、成本中心、法人实体间层级关系", tags:"公共,组织,维度", lineage:false, updated:"2026-05-17 09:30", completion:"processing",
+    columns:[
+      {name:"org_id",type:"bigint",origDesc:"机构ID",origTag:"主键",compDesc:"组织机构唯一标识",compTag:"主键",compTime:"2026-05-17 09:30"},
+      {name:"org_name",type:"varchar(128)",origDesc:"机构名称",origTag:"",compDesc:"组织机构全称",compTag:"",compTime:"2026-05-17 09:30"},
+      {name:"org_type",type:"varchar(16)",origDesc:"机构类型",origTag:"维度",compDesc:"DEPT/TEAM/COST_CENTER/LEGAL_ENTITY",compTag:"维度,枚举",compTime:"2026-05-17 09:30"},
+      {name:"parent_org_id",type:"bigint",origDesc:"上级机构ID",origTag:"外键",compDesc:"",compTag:"",compTime:""},
+      {name:"level",type:"int",origDesc:"层级",origTag:"",compDesc:"组织层级深度，根节点为1",compTag:"",compTime:"2026-05-17 09:30"},
+      {name:"status",type:"varchar(8)",origDesc:"状态",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ]
+  },
+  { id:"fact_compliance",  name:"fact_compliance",  type:"表",   system:"合规系统",   database:"dwd_comply",   schema:"comply", domain:"合规",   classification:"机密",   owner:"郑洁",   desc:"合规检查事实表，记录每笔交易的反洗钱筛查、内幕交易标记、合规规则命中结果", tags:"合规,AML,监管", lineage:true,  updated:"2026-05-18 05:50", completion:"completed",
+    columns:[
+      {name:"check_id",type:"bigint",origDesc:"检查记录ID",origTag:"主键",compDesc:"合规检查记录唯一标识",compTag:"主键",compTime:"2026-05-18 05:50"},
+      {name:"trade_id",type:"bigint",origDesc:"关联交易ID",origTag:"外键",compDesc:"被检查的原始交易ID",compTag:"外键",compTime:"2026-05-18 05:50"},
+      {name:"check_type",type:"varchar(16)",origDesc:"检查类型",origTag:"维度",compDesc:"AML/SANCTION/INSIDER/MARKET_MANIPULATION",compTag:"维度,枚举",compTime:"2026-05-18 05:50"},
+      {name:"rule_id",type:"varchar(32)",origDesc:"规则ID",origTag:"",compDesc:"触发合规规则的唯一标识",compTag:"标识",compTime:"2026-05-18 05:50"},
+      {name:"result",type:"varchar(8)",origDesc:"检查结果",origTag:"",compDesc:"PASS/FLAG/BLOCK 三级结果",compTag:"状态,枚举",compTime:"2026-05-18 05:50"},
+      {name:"checked_at",type:"timestamp",origDesc:"检查时间",origTag:"",compDesc:"合规规则执行时间戳",compTag:"审计,时间",compTime:"2026-05-18 05:50"},
+      {name:"reviewer",type:"varchar(64)",origDesc:"复核人",origTag:"",compDesc:"人工复核人员姓名",compTag:"",compTime:"2026-05-18 05:50"}
+    ]
+  },
+  { id:"vw_trade_summary", name:"vw_trade_summary", type:"视图", system:"交易系统",   database:"dws_agg",      schema:"agg",    domain:"交易",   classification:"内部",   owner:"刘洋",   desc:"当日交易汇总视图，按产品类型、交易方向聚合成交金额与笔数", tags:"交易,汇总,视图", lineage:true,  updated:"2026-05-18 08:00", completion:"completed",
+    columns:[
+      {name:"product_type",type:"varchar(16)",origDesc:"产品类型",origTag:"维度",compDesc:"产品类型分组，来源于dim_product",compTag:"维度",compTime:"2026-05-18 08:00"},
+      {name:"direction",type:"varchar(4)",origDesc:"交易方向",origTag:"维度",compDesc:"B=买入汇总 S=卖出汇总",compTag:"维度,枚举",compTime:"2026-05-18 08:00"},
+      {name:"trade_count",type:"bigint",origDesc:"成交笔数",origTag:"指标",compDesc:"当日该分组下的累计成交笔数",compTag:"指标,汇总",compTime:"2026-05-18 08:00"},
+      {name:"total_amount",type:"decimal(20,4)",origDesc:"成交金额合计",origTag:"指标",compDesc:"当日该分组下的累计成交金额",compTag:"指标,金额,汇总",compTime:"2026-05-18 08:00"},
+      {name:"avg_price",type:"decimal(18,6)",origDesc:"均价",origTag:"指标",compDesc:"当日该分组下的成交量加权平均价",compTag:"指标,价格",compTime:"2026-05-18 08:00"}
+    ]
+  },
+  { id:"col_trade_amount", name:"trade_amount",     type:"字段", system:"交易系统",   database:"ods_trade",    schema:"public", domain:"交易",   classification:"机密",   owner:"张明",   desc:"成交金额 — fact_trade.amount，decimal(18,4)，以交易币种计价", tags:"交易,字段,金额", lineage:true,  updated:"2026-05-18 08:30", completion:"pending" },
+  { id:"col_settle_date",  name:"settlement_date",  type:"字段", system:"清算系统",   database:"ods_settle",   schema:"public", domain:"清算",   classification:"机密",   owner:"陈芳",   desc:"交收日期 — fact_settlement.settle_date，date，T+1/T+2 根据产品类型", tags:"清算,字段,日期", lineage:true,  updated:"2026-05-18 07:15", completion:"processing" },
+  { id:"col_var_1d",       name:"var_1d_95",        type:"字段", system:"风控系统",   database:"dwd_risk",     schema:"risk",   domain:"风控",   classification:"机密",   owner:"黄立",   desc:"1日 95% 置信度 VaR — fact_risk_metric.var_1d_95，decimal(16,4)", tags:"风控,字段,VaR", lineage:true,  updated:"2026-05-18 06:45", completion:"completed" },
+  { id:"fact_position",    name:"fact_position",    type:"表",   system:"交易系统",   database:"dwd_position", schema:"pos",    domain:"交易",   classification:"机密",   owner:"张明",   desc:"持仓快照事实表，记录各账户每日持仓数量、成本、市值、浮动盈亏", tags:"交易,持仓,核心", lineage:true,  updated:"2026-05-18 08:45", completion:"processing",
+    columns:[
+      {name:"position_id",type:"bigint",origDesc:"持仓记录ID",origTag:"主键",compDesc:"持仓记录唯一标识",compTag:"主键",compTime:"2026-05-18 08:45"},
+      {name:"account_id",type:"bigint",origDesc:"账户ID",origTag:"外键",compDesc:"关联dim_account.account_id",compTag:"外键,维度",compTime:"2026-05-18 08:45"},
+      {name:"product_code",type:"varchar(32)",origDesc:"产品代码",origTag:"外键",compDesc:"",compTag:"",compTime:""},
+      {name:"position_date",type:"date",origDesc:"持仓日期",origTag:"分区",compDesc:"持仓快照日期",compTag:"分区,日期",compTime:"2026-05-18 08:45"},
+      {name:"quantity",type:"decimal(18,2)",origDesc:"持仓数量",origTag:"指标",compDesc:"当日持仓数量（正=多头，负=空头）",compTag:"指标,数量",compTime:"2026-05-18 08:45"},
+      {name:"cost_price",type:"decimal(18,6)",origDesc:"成本价",origTag:"指标",compDesc:"加权平均成本价格",compTag:"指标,价格",compTime:"2026-05-18 08:45"},
+      {name:"market_value",type:"decimal(18,4)",origDesc:"市值",origTag:"指标",compDesc:"当日收盘市值 = 持仓数量 × 收盘价",compTag:"指标,金额",compTime:"2026-05-18 08:45"},
+      {name:"unrealized_pnl",type:"decimal(18,4)",origDesc:"浮动盈亏",origTag:"指标",compDesc:"未实现盈亏 = 市值 - 成本",compTag:"指标,盈亏",compTime:"2026-05-18 08:45"}
+    ]
+  },
+  { id:"dim_rating",       name:"dim_rating",       type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"风控",   classification:"内部",   owner:"赵雪",   desc:"信用评级维度表，记录外部评级（S&P/Moody's/Fitch）与内部评级映射", tags:"风控,评级,维度", lineage:false, updated:"2026-05-16 16:30", completion:"pending",
+    columns:[
+      {name:"rating_id",type:"bigint",origDesc:"评级记录ID",origTag:"主键",compDesc:"",compTag:"",compTime:""},
+      {name:"entity_type",type:"varchar(16)",origDesc:"实体类型",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"entity_id",type:"bigint",origDesc:"实体ID",origTag:"外键",compDesc:"",compTag:"",compTime:""},
+      {name:"sp_rating",type:"varchar(8)",origDesc:"标普评级",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"moodys_rating",type:"varchar(8)",origDesc:"穆迪评级",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"fitch_rating",type:"varchar(8)",origDesc:"惠誉评级",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"internal_rating",type:"varchar(8)",origDesc:"内部评级",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"rating_date",type:"date",origDesc:"评级日期",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ]
+  },
+  { id:"fact_cash_flow",   name:"fact_cash_flow",   type:"表",   system:"财务系统",   database:"ods_finance",  schema:"public", domain:"财务",   classification:"机密",   owner:"陈芳",   desc:"资金流水事实表，含资金划拨、利息支付、费用扣收等现金流明细", tags:"财务,资金,流水", lineage:true,  updated:"2026-05-18 04:20", completion:"completed",
+    columns:[
+      {name:"flow_id",type:"bigint",origDesc:"流水ID",origTag:"主键",compDesc:"资金流水唯一标识",compTag:"主键",compTime:"2026-05-18 04:20"},
+      {name:"account_id",type:"bigint",origDesc:"账户ID",origTag:"外键",compDesc:"关联dim_account.account_id",compTag:"外键",compTime:"2026-05-18 04:20"},
+      {name:"flow_type",type:"varchar(16)",origDesc:"流水类型",origTag:"维度",compDesc:"TRANSFER/INTEREST/FEE/DIVIDEND/TAX",compTag:"维度,枚举",compTime:"2026-05-18 04:20"},
+      {name:"amount",type:"decimal(18,4)",origDesc:"金额",origTag:"指标",compDesc:"流入为正，流出为负",compTag:"指标,金额",compTime:"2026-05-18 04:20"},
+      {name:"currency",type:"varchar(3)",origDesc:"币种",origTag:"维度",compDesc:"ISO 4217 货币代码",compTag:"维度",compTime:"2026-05-18 04:20"},
+      {name:"flow_date",type:"date",origDesc:"发生日期",origTag:"分区",compDesc:"资金变动日期",compTag:"日期,分区",compTime:"2026-05-18 04:20"},
+      {name:"counterparty_account",type:"varchar(64)",origDesc:"对手账户",origTag:"",compDesc:"对手方银行账户号码",compTag:"",compTime:"2026-05-18 04:20"},
+      {name:"remark",type:"varchar(256)",origDesc:"摘要",origTag:"",compDesc:"业务摘要说明",compTag:"",compTime:"2026-05-18 04:20"}
+    ]
+  },
+  { id:"vw_risk_dashboard",name:"vw_risk_dashboard",type:"视图", system:"风控系统",   database:"dws_agg",      schema:"agg",    domain:"风控",   classification:"机密",   owner:"黄立",   desc:"风控大屏视图，聚合当日 VaR、压力损失、集中度等关键风险指标", tags:"风控,大屏,视图", lineage:true,  updated:"2026-05-18 07:30", completion:"processing",
+    columns:[
+      {name:"portfolio_id",type:"varchar(32)",origDesc:"组合ID",origTag:"维度",compDesc:"投资组合标识",compTag:"维度",compTime:"2026-05-18 07:30"},
+      {name:"var_1d_95",type:"decimal(16,4)",origDesc:"1日95%VaR",origTag:"指标",compDesc:"1天持有期、95%置信度的在险价值",compTag:"指标,VaR",compTime:"2026-05-18 07:30"},
+      {name:"stress_loss",type:"decimal(16,4)",origDesc:"压力损失",origTag:"指标",compDesc:"极端情景下的最大潜在损失",compTag:"指标",compTime:"2026-05-18 07:30"},
+      {name:"concentration_ratio",type:"decimal(8,4)",origDesc:"集中度",origTag:"指标",compDesc:"前五大持仓占比",compTag:"指标,风控",compTime:"2026-05-18 07:30"},
+      {name:"liquidity_ratio",type:"decimal(8,4)",origDesc:"流动性比率",origTag:"指标",compDesc:"流动资产/总资产",compTag:"指标",compTime:"2026-05-18 07:30"},
+      {name:"as_of_date",type:"date",origDesc:"数据日期",origTag:"",compDesc:"风险指标计量日期",compTag:"日期",compTime:"2026-05-18 07:30"}
+    ]
+  },
+];
+
+const domainColors = { '交易':'blue','风控':'amber','清算':'green','合规':'amber','财务':'green','客户':'blue','产品':'slate','行情':'green','公共':'slate' };
+const classColors = { '机密':'amber','内部':'blue','公开':'green' };
+const compLabels = { pending:'待补全', processing:'处理中', completed:'已完成' };
+const compColors = { pending:'amber', processing:'blue', completed:'green' };
+
+function getParam(name) {
+  return new URL(window.location.href).searchParams.get(name);
+}
+
+function tagBadge(text, color) {
+  return `<span class="tag tag-${color}">${text}</span>`;
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tabBtn' + tabId).classList.add('active');
+  document.getElementById('tabPanel' + tabId).classList.add('active');
+}
+
+function render() {
+  const id = getParam('id');
+  const main = document.getElementById('mainContent');
+
+  if (!id) {
+    main.innerHTML = `<div class="error-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <h2>缺少资产标识</h2><p>请从资产目录中选择一条资产查看详情。</p>
+      <a class="btn btn-secondary" href="meta_search.html">← 返回资产目录</a>
+    </div>`;
+    document.title = '缺少资产标识 — MetaGraph';
+    return;
+  }
+
+  const a = ASSETS.find(x => x.id === id);
+  if (!a) {
+    main.innerHTML = `<div class="error-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <h2>未找到该资产</h2><p>资产「${id.replace(/[<>&"']/g,'')}」不存在或已被移除。</p>
+      <a class="btn btn-secondary" href="meta_search.html">← 返回资产目录</a>
+    </div>`;
+    document.title = '未找到 — MetaGraph';
+    return;
+  }
+
+  document.title = `${a.name} — MetaGraph`;
+  const compClass = compColors[a.completion] || 'slate';
+  const compText = compLabels[a.completion] || a.completion;
+  const tags = (a.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+  main.innerHTML = `
+    <!-- ── Top zone: compact header ── -->
+    <div class="top-zone">
+      <div class="breadcrumb"><a href="meta_search.html">资产目录</a> / ${a.name}</div>
+      <div class="asset-name">${a.name}</div>
+      <div class="asset-subtitle">${a.type} · ${a.database}.${a.schema}</div>
+      <div class="asset-desc">${a.desc}</div>
+      <div class="badge-row">
+        ${tagBadge(a.type, 'slate')}
+        ${tagBadge(a.system, domainColors[a.domain] || 'slate')}
+        ${tagBadge(a.domain, domainColors[a.domain] || 'slate')}
+        ${tagBadge(a.classification, classColors[a.classification] || 'slate')}
+        ${tagBadge(compText, compClass)}
+      </div>
+    </div>
+
+    <!-- ── Bottom zone: tabs ── -->
+    <div class="bottom-zone">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabBtn1" onclick="switchTab(1)">基本信息</button>
+        <button class="tab-btn" id="tabBtn2" onclick="switchTab(2)">列信息</button>
+      </div>
+
+      <!-- Tab 1: 基本信息 -->
+      <div class="tab-panel active" id="tabPanel1">
+        <div class="info-section-title">基本信息</div>
+        <div class="detail-list">
+          <div class="detail-row"><span class="detail-label">名称</span><span class="detail-value mono">${a.name}</span></div>
+          <div class="detail-row"><span class="detail-label">类型</span><span class="detail-value">${tagBadge(a.type, 'slate')}</span></div>
+          <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">${a.desc}</span></div>
+          <div class="detail-row"><span class="detail-label">所属系统</span><span class="detail-value mono">${a.system}</span></div>
+          <div class="detail-row"><span class="detail-label">所属库</span><span class="detail-value mono">${a.database}</span></div>
+          <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">${a.schema}</span></div>
+          <div class="detail-row"><span class="detail-label">业务域</span><span class="detail-value">${tagBadge(a.domain, domainColors[a.domain]||'slate')}</span></div>
+          <div class="detail-row"><span class="detail-label">分类</span><span class="detail-value">${tagBadge(a.classification, classColors[a.classification]||'slate')}</span></div>
+          <div class="detail-row"><span class="detail-label">负责人</span><span class="detail-value">${a.owner}</span></div>
+          <div class="detail-row"><span class="detail-label">血缘</span><span class="detail-value">${tagBadge(a.lineage ? '已建立' : '未建立', a.lineage ? 'green' : 'slate')}</span></div>
+          <div class="detail-row"><span class="detail-label">补全状态</span><span class="detail-value">${tagBadge(compText, compClass)}</span></div>
+          <div class="detail-row"><span class="detail-label">标签</span><span class="detail-value">${tags.map(t => tagBadge(t, 'slate')).join('')}</span></div>
+          <div class="detail-row"><span class="detail-label">更新时间</span><span class="detail-value mono">${a.updated}</span></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: 列信息 -->
+      <div class="tab-panel" id="tabPanel2">
+        ${renderColumnsTab(a)}
+      </div>
+    </div>`;
+}
+
+function renderColumnsTab(a) {
+  if (!a.columns || a.columns.length === 0) {
+    return `<div class="empty-state">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      <p>该资产类型为「${a.type}」，无列信息可展示</p>
+    </div>`;
+  }
+
+  const rows = a.columns.map(col => {
+    const origTags = (col.origTag || '').split(',').map(t => t.trim()).filter(Boolean);
+    const compTags = (col.compTag || '').split(',').map(t => t.trim()).filter(Boolean);
+
+    const origTagHtml = origTags.length
+      ? origTags.map(t => `<span class="tag tag-slate">${t}</span>`).join('')
+      : '<span class="cell-empty">—</span>';
+
+    const compDescHtml = col.compDesc
+      ? col.compDesc
+      : '<span class="cell-empty">待补全</span>';
+
+    const compTagHtml = compTags.length
+      ? compTags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')
+      : '<span class="cell-empty">待补全</span>';
+
+    const compTimeHtml = col.compTime
+      ? col.compTime
+      : '<span class="cell-empty">—</span>';
+
+    return `<tr>
+      <td><span class="col-name">${col.name}</span></td>
+      <td><span class="col-type">${col.type}</span></td>
+      <td><div class="cell-desc">${col.origDesc || '<span class="cell-empty">—</span>'}</div></td>
+      <td><div class="cell-tags">${origTagHtml}</div></td>
+      <td><div class="cell-desc">${compDescHtml}</div></td>
+      <td><div class="cell-tags">${compTagHtml}</div></td>
+      <td><span class="cell-time">${compTimeHtml}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="info-section-title">列信息 (${a.columns.length} 列)</div>
+    <div class="cols-table-wrap">
+      <table class="cols-table">
+        <thead>
+          <tr>
+            <th>列名</th>
+            <th>类型</th>
+            <th>原始描述</th>
+            <th>原始分类标签</th>
+            <th>补全描述</th>
+            <th>补全分类标签</th>
+            <th>补全时间</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
