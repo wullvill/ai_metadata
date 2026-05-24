@@ -67,3 +67,9 @@ frontend/src/
 ├── api/          # API 客户端 + 类型定义
 └── router/       # Vue Router 配置
 ```
+
+## 环境信息
+
+前端地址: http://localhost:5173/search
+后端地址: http://localhost:8000/
+接口规范: http://localhost:8000/docsdocs
