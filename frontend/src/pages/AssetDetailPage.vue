@@ -30,6 +30,7 @@
               <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">{{ asset?.description || '—' }}</span></div>
               <div class="detail-row"><span class="detail-label">所属库</span><span class="detail-value mono">{{ asset?.database || '—' }}</span></div>
               <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">{{ asset?.schema_name || '—' }}</span></div>
+              <div class="detail-row"><span class="detail-label">所属系统</span><span class="detail-value">{{ asset?.system || '—' }}</span></div>
 
               <div class="detail-row"><span class="detail-label">标签</span><span class="detail-value">
                 <t-tag v-for="tag in asset?.tags" :key="tag" variant="light" theme="default" style="margin-right:4px">{{ tag }}</t-tag>

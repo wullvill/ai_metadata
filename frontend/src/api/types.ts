@@ -132,6 +132,7 @@ export interface AssetDetail {
   entity_id: string
   entity_type: 'table' | 'view'
   database: string
+  system?: string
   schema_name: string
   table_name: string
   column_name?: string

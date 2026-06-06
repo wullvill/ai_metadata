@@ -42,6 +42,17 @@ async def test_review_detail_not_found(client):
 
 
 @pytest.mark.asyncio
+async def test_asset_detail_includes_system(client):
+    """资产详情 API 应包含 system 字段（所属系统）"""
+    resp = await client.get("/api/v1/assets/fact_trade")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "system" in data, f"Expected 'system' field, got keys: {list(data.keys())}"
+    assert isinstance(data["system"], str)
+    assert len(data["system"]) > 0
+
+
+@pytest.mark.asyncio
 async def test_complete_trigger_validation(client):
     """缺少必填字段应返回 422"""
     resp = await client.post("/api/v1/complete/trigger/manual", json={
