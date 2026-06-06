@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     dashscope_api_key: str = ""
 
     # Milvus
-    milvus_host: str = "localhost"
+    milvus_host: str = "172.17.5.229"
     milvus_port: int = 19530
 
     # Elasticsearch

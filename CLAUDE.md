@@ -72,4 +72,4 @@ frontend/src/
 
 前端地址: http://localhost:5173/search
 后端地址: http://localhost:8000/
-接口规范: http://localhost:8000/docsdocs
+接口规范: http://localhost:8000/docs
