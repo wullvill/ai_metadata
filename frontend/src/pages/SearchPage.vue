@@ -227,7 +227,7 @@ async function confirmCompletion() {
 
   const target: TargetEntity = {
     entity_id: entity.entity_id,
-    entity_type: entity.entity_type as 'table' | 'column',
+    entity_type: (entity.entity_type === 'view' ? 'table' : entity.entity_type) as 'table' | 'column',
     database: entity.database,
     schema: entity.schema,
     table_name: entity.table_name,
@@ -608,8 +608,8 @@ onMounted(async () => {
           <!-- Empty State -->
           <template #empty>
             <div class="empty-state">
-              <t-icon :name="searchQuery ? 'file-unknown' : 'search'" size="48px" />
-              <p>{{ searchQuery ? '没有匹配的元数据资产' : '输入关键词开始搜索元数据' }}</p>
+              <t-icon :name="filters.query ? 'file-unknown' : 'search'" size="48px" />
+              <p>{{ filters.query ? '没有匹配的元数据资产' : '输入关键词开始搜索元数据' }}</p>
             </div>
           </template>
         </t-table>

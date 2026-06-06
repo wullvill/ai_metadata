@@ -1,69 +1,72 @@
 <template>
   <div class="asset-detail">
-    <div class="top-zone">
-      <div class="breadcrumb">
-        <router-link to="/search">资产目录</router-link> / {{ asset?.table_name || '...' }}
+    <template v-if="error">
+      <div class="error-state">
+        <t-icon name="error-circle" size="48px" />
+        <h2>{{ error }}</h2>
+        <router-link to="/search"><t-button theme="default">← 返回资产目录</t-button></router-link>
       </div>
-      <h1 class="asset-name">{{ asset?.table_name || asset?.column_name || '...' }}</h1>
-      <p class="asset-subtitle">{{ entityTypeLabel }} · {{ asset?.database }}.{{ asset?.schema_name }}</p>
-      <p class="asset-desc">{{ asset?.description || '暂无描述' }}</p>
-      <div class="badge-row">
-        <t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag>
-        <t-tag variant="light" :theme="statusTheme">{{ statusLabel }}</t-tag>
+    </template>
+    <template v-else>
+      <div class="top-zone">
+        <div class="breadcrumb">
+          <router-link to="/search">资产目录</router-link> / {{ asset?.table_name || '...' }}
+        </div>
+        <h1 class="asset-name">{{ asset?.table_name || asset?.column_name || '...' }}</h1>
+        <p class="asset-subtitle">{{ entityTypeLabel }} · {{ asset?.database }}.{{ asset?.schema_name }}</p>
+        <p class="asset-desc">{{ asset?.description || '暂无描述' }}</p>
+        <div class="badge-row">
+          <t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag>
+          <t-tag variant="light" :theme="statusTheme">{{ statusLabel }}</t-tag>
+        </div>
       </div>
-    </div>
 
-    <div class="bottom-zone">
-      <t-tabs v-model="activeTab">
-        <t-tab-panel value="info" label="基本信息">
-          <div class="detail-list">
-            <div class="detail-row"><span class="detail-label">名称</span><span class="detail-value mono">{{ asset?.table_name || asset?.column_name }}</span></div>
-            <div class="detail-row"><span class="detail-label">类型</span><span class="detail-value"><t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag></span></div>
-            <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">{{ asset?.description || '—' }}</span></div>
-            <div class="detail-row"><span class="detail-label">所属库</span><span class="detail-value mono">{{ asset?.database || '—' }}</span></div>
-            <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">{{ asset?.schema_name || '—' }}</span></div>
+      <div class="bottom-zone">
+        <t-tabs v-model="activeTab">
+          <t-tab-panel value="info" label="基本信息">
+            <div class="detail-list">
+              <div class="detail-row"><span class="detail-label">名称</span><span class="detail-value mono">{{ asset?.table_name || asset?.column_name }}</span></div>
+              <div class="detail-row"><span class="detail-label">类型</span><span class="detail-value"><t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag></span></div>
+              <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">{{ asset?.description || '—' }}</span></div>
+              <div class="detail-row"><span class="detail-label">所属库</span><span class="detail-value mono">{{ asset?.database || '—' }}</span></div>
+              <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">{{ asset?.schema_name || '—' }}</span></div>
 
-            <div class="detail-row"><span class="detail-label">标签</span><span class="detail-value">
-              <t-tag v-for="tag in asset?.tags" :key="tag" variant="light" theme="default" style="margin-right:4px">{{ tag }}</t-tag>
-              <span v-if="!asset?.tags?.length">—</span>
-            </span></div>
-          </div>
-        </t-tab-panel>
+              <div class="detail-row"><span class="detail-label">标签</span><span class="detail-value">
+                <t-tag v-for="tag in asset?.tags" :key="tag" variant="light" theme="default" style="margin-right:4px">{{ tag }}</t-tag>
+                <span v-if="!asset?.tags?.length">—</span>
+              </span></div>
+            </div>
+          </t-tab-panel>
 
-        <t-tab-panel value="columns" label="列信息">
-          <div v-if="columns.length > 0">
-            <p class="section-title">列信息 ({{ columns.length }} 列)</p>
-            <t-table :data="columns" :columns="columnTableDefs" row-key="column_id" bordered stripe size="small">
-              <template #original_tags="{ row }">
-                <t-tag v-for="tag in row.original_tags" :key="tag" variant="light" theme="default" size="small" style="margin-right:2px">
-                  {{ tag }}
-                </t-tag>
-                <span v-if="!row.original_tags?.length">—</span>
-              </template>
-              <template #completion_tags="{ row }">
-                <t-tag v-for="tag in row.completion_tags" :key="tag" variant="light" theme="primary" size="small" style="margin-right:2px">
-                  {{ tag }}
-                </t-tag>
-                <span v-if="!row.completion_tags?.length">—</span>
-              </template>
-              <template #completion_time="{ row }">
-                <span v-if="row.completion_time">{{ row.completion_time }}</span>
-                <span v-else>—</span>
-              </template>
-            </t-table>
-          </div>
-          <div v-else class="empty-state">
-            <p>暂无列信息</p>
-          </div>
-        </t-tab-panel>
-      </t-tabs>
-    </div>
-
-    <div v-if="error" class="error-state">
-      <t-icon name="error-circle" size="48px" />
-      <h2>{{ error }}</h2>
-      <router-link to="/search"><t-button theme="default">← 返回资产目录</t-button></router-link>
-    </div>
+          <t-tab-panel value="columns" label="列信息">
+            <div v-if="columns.length > 0">
+              <p class="section-title">列信息 ({{ columns.length }} 列)</p>
+              <t-table :data="columns" :columns="columnTableDefs" row-key="column_id" bordered stripe size="small">
+                <template #original_tags="{ row }">
+                  <t-tag v-for="tag in row.original_tags" :key="tag" variant="light" theme="default" size="small" style="margin-right:2px">
+                    {{ tag }}
+                  </t-tag>
+                  <span v-if="!row.original_tags?.length">—</span>
+                </template>
+                <template #completion_tags="{ row }">
+                  <t-tag v-for="tag in row.completion_tags" :key="tag" variant="light" theme="primary" size="small" style="margin-right:2px">
+                    {{ tag }}
+                  </t-tag>
+                  <span v-if="!row.completion_tags?.length">—</span>
+                </template>
+                <template #completion_time="{ row }">
+                  <span v-if="row.completion_time">{{ row.completion_time }}</span>
+                  <span v-else>—</span>
+                </template>
+              </t-table>
+            </div>
+            <div v-else class="empty-state">
+              <p>暂无列信息</p>
+            </div>
+          </t-tab-panel>
+        </t-tabs>
+      </div>
+    </template>
   </div>
 </template>
 
