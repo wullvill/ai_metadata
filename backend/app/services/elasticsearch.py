@@ -1,5 +1,5 @@
 """Elasticsearch 服务"""
-from elasticsearch import Elasticsearch, helpers
+from elasticsearch import Elasticsearch, helpers, NotFoundError
 from app.config import get_settings
 from app.utils.logger import get_logger
 
@@ -266,8 +266,10 @@ def _normalize_datetime(value: str | None) -> str | None:
         return None
     if "T" in value:
         return value
-    # Convert "2026-05-18 08:30" to "2026-05-18T08:30:00"
-    return value.replace(" ", "T") + ":00"
+    s = value.replace(" ", "T")
+    if s.count(":") >= 2:
+        return s
+    return s + ":00"
 
 
 def index_columns(entity_id: str, columns: list[dict]) -> None:
@@ -298,12 +300,12 @@ def index_columns(entity_id: str, columns: list[dict]) -> None:
         logger.warning(f"ES columns bulk index: {success} ok, {len(errors)} errors")
 
 
-def get_columns(entity_id: str) -> list[dict]:
+def get_columns(entity_id: str, size: int = 500) -> list[dict]:
     """Get all columns for a given entity"""
     es = get_es_client()
     body = {
         "query": {"term": {"entity_id": entity_id}},
-        "size": 500,
+        "size": size,
         "sort": [{"column_name.raw": "asc"}],
     }
     resp = es.search(index=COLUMNS_INDEX, body=body)
@@ -316,5 +318,5 @@ def get_asset_by_id(entity_id: str) -> dict | None:
     try:
         resp = es.get(index=INDEX_NAME, id=entity_id)
         return resp["_source"]
-    except Exception:
+    except NotFoundError:
         return None
