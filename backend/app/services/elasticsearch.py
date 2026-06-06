@@ -35,6 +35,7 @@ MAPPINGS = {
         "display_name": {"type": "text"},
         "description": {"type": "text"},
         "data_type": {"type": "keyword"},
+        "db_type": {"type": "keyword"},
         "tags": {"type": "keyword"},
         "has_description": {"type": "boolean"},
     }
@@ -140,6 +141,7 @@ def search_all(
     database: str | None = None,
     schema_name: str | None = None,
     data_type: str | None = None,
+    db_type: str | None = None,
     top_k: int = 20,
 ) -> list[dict]:
     """通用搜索（用于前端搜索页）"""
@@ -154,6 +156,8 @@ def search_all(
         must.append({"term": {"schema_name": schema_name}})
     if data_type:
         must.append({"term": {"data_type": data_type}})
+    if db_type:
+        must.append({"term": {"db_type": db_type}})
 
     has_query = bool(query_text.strip())
     has_filters = bool(must)
@@ -209,6 +213,7 @@ def get_filter_options() -> dict[str, list[str]]:
         "aggs": {
             "systems": {"terms": {"field": "database", "size": 100}},
             "schemas": {"terms": {"field": "schema_name", "size": 100}},
+            "db_types": {"terms": {"field": "db_type", "size": 20}},
         },
     }
     resp = es.search(index=INDEX_NAME, body=body)
@@ -217,6 +222,7 @@ def get_filter_options() -> dict[str, list[str]]:
         "systems": [b["key"] for b in aggs["systems"]["buckets"]],
         "databases": [b["key"] for b in aggs["systems"]["buckets"]],
         "schemas": [b["key"] for b in aggs["schemas"]["buckets"]],
+        "db_types": [b["key"] for b in aggs["db_types"]["buckets"]],
     }
 
 

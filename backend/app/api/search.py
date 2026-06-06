@@ -22,6 +22,7 @@ async def search_metadata(req: SearchRequest):
         database=req.database,
         schema_name=req.schema_name,
         data_type=req.data_type,
+        db_type=req.db_type,
         top_k=100,
     )
     # 分页

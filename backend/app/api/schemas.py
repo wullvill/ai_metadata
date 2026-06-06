@@ -53,5 +53,6 @@ class SearchRequest(BaseModel):
     database: str | None = None
     schema_name: str | None = Field(default=None, alias="schema")
     data_type: str | None = None
+    db_type: str | None = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
