@@ -345,3 +345,16 @@ def set_sample_flag(entity_ids: list[str], is_sample: bool) -> int:
         refresh=True,
     )
     return resp.get("updated", 0)
+
+
+def get_samples() -> list[dict]:
+    """获取全部样本"""
+    es = get_es_client()
+    resp = es.search(
+        index=INDEX_NAME,
+        body={
+            "query": {"term": {"is_sample": True}},
+            "size": 1000,
+        },
+    )
+    return [hit["_source"] for hit in resp["hits"]["hits"]]

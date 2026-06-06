@@ -40,3 +40,38 @@ class TestSetSampleFlag:
 
         assert result == 0
         mock_client.assert_not_called()
+
+
+class TestGetSamples:
+    def test_get_samples_queries_by_is_sample_true(self):
+        from app.services.elasticsearch import get_samples
+
+        mock_es = MagicMock()
+        mock_es.search.return_value = {
+            "hits": {
+                "hits": [
+                    {"_source": {"entity_id": "a", "is_sample": True}},
+                    {"_source": {"entity_id": "b", "is_sample": True}},
+                ]
+            }
+        }
+
+        with patch("app.services.elasticsearch.get_es_client", return_value=mock_es):
+            result = get_samples()
+
+        assert len(result) == 2
+        assert result[0]["entity_id"] == "a"
+        assert result[1]["entity_id"] == "b"
+        body = mock_es.search.call_args.kwargs["body"]
+        assert body["query"]["term"] == {"is_sample": True}
+
+    def test_get_samples_empty(self):
+        from app.services.elasticsearch import get_samples
+
+        mock_es = MagicMock()
+        mock_es.search.return_value = {"hits": {"hits": []}}
+
+        with patch("app.services.elasticsearch.get_es_client", return_value=mock_es):
+            result = get_samples()
+
+        assert result == []
