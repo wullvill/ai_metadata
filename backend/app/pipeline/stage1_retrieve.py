@@ -118,6 +118,24 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
         logger.error("Stage 1 failed: 双路检索均不可用")
         return state
 
+    # 查询样本并置顶
+    try:
+        sample_docs = elasticsearch.get_samples()
+        if sample_docs:
+            logger.info(f"Stage 1: {len(sample_docs)} samples found, boosting rank")
+            for doc in sample_docs:
+                milvus_results.insert(0, {
+                    "entity_id": doc["entity_id"],
+                    "score": 1.0,
+                    "source": "sample",
+                    "table_name": doc.get("table_name"),
+                    "display_name": doc.get("display_name"),
+                    "description": doc.get("description"),
+                    "search_text": doc.get("description", doc.get("table_name", "")),
+                })
+    except Exception as e:
+        logger.warning(f"Stage 1: failed to fetch samples: {e}")
+
     # RRF 合并或单路降级
     if milvus_ok and es_ok:
         merged = rrf_merge(milvus_results, es_results, top_n=15)
