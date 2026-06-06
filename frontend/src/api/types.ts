@@ -1,6 +1,6 @@
 export interface MetadataEntity {
   entity_id: string
-  entity_type: 'table' | 'column'
+  entity_type: 'table' | 'view'
   database: string
   schema: string
   table_name: string
@@ -114,6 +114,32 @@ export interface HistoryParams {
   end_date?: string
   page?: number
   limit?: number
+}
+
+export interface ColumnInfo {
+  column_id: string
+  entity_id: string
+  column_name: string
+  data_type: string
+  original_description: string
+  original_tags: string[]
+  completion_description: string
+  completion_tags: string[]
+  completion_time: string | null
+}
+
+export interface AssetDetail {
+  entity_id: string
+  entity_type: 'table' | 'view'
+  database: string
+  schema_name: string
+  table_name: string
+  column_name?: string
+  display_name?: string
+  description?: string
+  tags?: string[]
+  has_description?: boolean
+  columns: ColumnInfo[]
 }
 
 export interface FilterOptions {

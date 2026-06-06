@@ -6,6 +6,7 @@ import type {
   CompletionResponse,
   ReviewRecord,
   ReviewDetail,
+  AssetDetail,
 } from './types'
 
 const api = axios.create({
@@ -80,5 +81,10 @@ export async function getCompletionHistory(params: {
   limit?: number
 }): Promise<{ success: boolean; data: ReviewRecord[]; meta?: { total: number } }> {
   const { data } = await api.get('/review/queue', { params: { ...params, page_size: params.limit } })
+  return data
+}
+
+export async function getAssetDetail(entityId: string): Promise<{ success: boolean; data: AssetDetail }> {
+  const { data } = await api.get(`/assets/${entityId}`)
   return data
 }
