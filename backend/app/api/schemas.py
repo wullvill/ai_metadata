@@ -56,3 +56,8 @@ class SearchRequest(BaseModel):
     db_type: str | None = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
+
+
+class SampleSetRequest(BaseModel):
+    entity_ids: list[str]
+    is_sample: bool

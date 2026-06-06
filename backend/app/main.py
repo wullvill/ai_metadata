@@ -29,6 +29,7 @@ def create_app() -> FastAPI:
     from app.api.sync import router as sync_router
     from app.api.history import router as history_router
     from app.api.assets import router as assets_router
+    from app.api.samples import router as sample_router
 
     app.include_router(search_router)
     app.include_router(complete_router)
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(sync_router)
     app.include_router(history_router)
     app.include_router(assets_router)
+    app.include_router(sample_router)
 
     return app
 
