@@ -7,6 +7,7 @@ import type {
   ReviewRecord,
   ReviewDetail,
   AssetDetail,
+  PipelineConfig,
 } from './types'
 
 const api = axios.create({
@@ -98,4 +99,19 @@ export async function getAssetDetail(entityId: string): Promise<{ success: boole
 
 export async function setSamples(entityIds: string[], isSample: boolean): Promise<void> {
   await api.post('/samples/set', { entity_ids: entityIds, is_sample: isSample })
+}
+
+export async function getConfig(): Promise<{ success: boolean; data: PipelineConfig }> {
+  const { data } = await api.get('/config')
+  return data
+}
+
+export async function updateConfig(partial: Partial<PipelineConfig>): Promise<{ success: boolean; data: PipelineConfig }> {
+  const { data } = await api.put('/config', partial)
+  return data
+}
+
+export async function getConfigDefaults(): Promise<{ success: boolean; data: PipelineConfig }> {
+  const { data } = await api.get('/config/defaults')
+  return data
 }

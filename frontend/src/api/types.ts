@@ -153,3 +153,24 @@ export interface FilterOptions {
   schemas: string[]
   db_types: string[]
 }
+
+export interface PipelineConfig {
+  thresholds: {
+    auto_approve: number
+    pending_review: number
+  }
+  models: {
+    default: string
+    auto_select: boolean
+    table_rich_threshold: number
+  }
+  retrieval: {
+    milvus_top_k: number
+    es_keyword_top_k: number
+    es_siblings_top_k: number
+    rrf_k: number
+    rrf_top_n: number
+    sample_boost: boolean
+  }
+  rules: Record<string, { enabled: boolean }>
+}
