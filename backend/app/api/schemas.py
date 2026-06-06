@@ -61,3 +61,39 @@ class SearchRequest(BaseModel):
 class SampleSetRequest(BaseModel):
     entity_ids: list[str]
     is_sample: bool
+
+
+class PipelineConfigSchema(BaseModel):
+    thresholds: dict = Field(default_factory=lambda: {
+        "auto_approve": 0.80,
+        "pending_review": 0.60,
+    })
+    models: dict = Field(default_factory=lambda: {
+        "default": "qwen-plus",
+        "auto_select": True,
+        "table_rich_threshold": 5,
+    })
+    retrieval: dict = Field(default_factory=lambda: {
+        "milvus_top_k": 20,
+        "es_keyword_top_k": 20,
+        "es_siblings_top_k": 5,
+        "rrf_k": 60,
+        "rrf_top_n": 15,
+        "sample_boost": True,
+    })
+    rules: dict = Field(default_factory=lambda: {
+        "required_fields": {"enabled": True},
+        "display_name_no_code": {"enabled": True},
+        "description_not_copy_name": {"enabled": True},
+        "sensitive_level_valid": {"enabled": True},
+        "tag_no_duplicates": {"enabled": True},
+        "business_domain_valid": {"enabled": True},
+        "table_name_consistency": {"enabled": True},
+    })
+
+
+class PipelineConfigUpdateRequest(BaseModel):
+    thresholds: dict | None = None
+    models: dict | None = None
+    retrieval: dict | None = None
+    rules: dict | None = None
