@@ -24,13 +24,13 @@ class TestConfigService:
 
     def test_load_returns_defaults_when_no_cache(self):
         svc = ConfigService()
-        svc._cached = None
+        ConfigService._cached = None
         config = ConfigService.get_config()
         assert config["thresholds"]["auto_approve"] == 0.80
 
     def test_partial_update_merges_correctly(self):
         svc = ConfigService()
-        svc._cached = dict(DEFAULTS)
+        ConfigService._cached = dict(DEFAULTS)
         partial = {"thresholds": {"auto_approve": 0.90}}
         updated = svc.apply_partial(partial)
         assert updated["thresholds"]["auto_approve"] == 0.90
@@ -39,7 +39,7 @@ class TestConfigService:
 
     def test_partial_update_keeps_unrelated_sections(self):
         svc = ConfigService()
-        svc._cached = dict(DEFAULTS)
+        ConfigService._cached = dict(DEFAULTS)
         partial = {"retrieval": {"rrf_top_n": 10}}
         updated = svc.apply_partial(partial)
         assert updated["retrieval"]["rrf_top_n"] == 10

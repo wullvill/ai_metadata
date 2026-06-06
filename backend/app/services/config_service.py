@@ -65,14 +65,14 @@ class ConfigService:
         )
         row = result.scalar_one_or_none()
         if row:
-            self._cached = copy.deepcopy(row.config)
+            ConfigService._cached = copy.deepcopy(row.config)
         else:
             row = PipelineConfig(id=1, config=copy.deepcopy(DEFAULTS))
             session.add(row)
             await session.commit()
-            self._cached = copy.deepcopy(DEFAULTS)
+            ConfigService._cached = copy.deepcopy(DEFAULTS)
         logger.info("ConfigService: loaded config from DB")
-        return self._cached
+        return ConfigService._cached
 
     async def save_to_db(self, session, config: dict, updated_by: str = "admin") -> dict:
         """写入 DB 并刷新缓存"""
@@ -87,17 +87,17 @@ class ConfigService:
             row = PipelineConfig(id=1, config=config, updated_by=updated_by)
             session.add(row)
         await session.commit()
-        self._cached = copy.deepcopy(config)
+        ConfigService._cached = copy.deepcopy(config)
         logger.info(f"ConfigService: config saved by {updated_by}")
-        return self._cached
+        return ConfigService._cached
 
     def apply_partial(self, partial: dict) -> dict:
         """将部分更新合并到当前缓存，返回合并后的完整配置"""
-        current = copy.deepcopy(self._cached) if self._cached else copy.deepcopy(DEFAULTS)
+        current = copy.deepcopy(ConfigService._cached) if ConfigService._cached else copy.deepcopy(DEFAULTS)
         for section in ("thresholds", "models", "retrieval", "rules"):
             if section in partial and partial[section] is not None:
                 current[section] = {**current[section], **partial[section]}
-        self._cached = current
+        ConfigService._cached = current
         return copy.deepcopy(current)
 
     @classmethod
