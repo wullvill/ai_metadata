@@ -18,6 +18,7 @@ export interface FilterOptions {
   systems: string[]
   databases: string[]
   schemas: string[]
+  db_types: string[]
 }
 
 export async function getFilterOptions(): Promise<{ success: boolean; data: FilterOptions }> {

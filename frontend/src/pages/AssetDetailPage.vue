@@ -29,6 +29,7 @@
               <div class="detail-row"><span class="detail-label">类型</span><span class="detail-value"><t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag></span></div>
               <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">{{ asset?.description || '—' }}</span></div>
               <div class="detail-row"><span class="detail-label">所属库</span><span class="detail-value mono">{{ asset?.database || '—' }}</span></div>
+              <div class="detail-row"><span class="detail-label">数据库类型</span><span class="detail-value">{{ asset?.db_type || '—' }}</span></div>
               <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">{{ asset?.schema_name || '—' }}</span></div>
               <div class="detail-row"><span class="detail-label">所属系统</span><span class="detail-value">{{ asset?.system || '—' }}</span></div>
 

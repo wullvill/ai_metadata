@@ -43,6 +43,7 @@ const localFilters = reactive({
   database: '',
   schema: '',
   type: '',
+  dbType: '',
   businessDomain: '',
   completion: '',
 })
@@ -90,7 +91,7 @@ const COMPLETION_OPTIONS = [
 ]
 
 	// API-loaded filter options
-	const apiFilterOpts = ref<FilterOptions>({ systems: [], databases: [], schemas: [] })
+	const apiFilterOpts = ref<FilterOptions>({ systems: [], databases: [], schemas: [], db_types: [] })
 
 // ── Derived filter options from results ──
 const resultsAsDisplay = computed(() => results.value as AssetDisplay[])
@@ -308,6 +309,7 @@ const columns: TableProps['columns'] = [
   { colKey: 'system', title: '所属系统', sorter: true, width: 120 },
   { colKey: 'entity_type', title: '类型', sorter: true, width: 80 },
   { colKey: 'database', title: '所属库', sorter: true, width: 130 },
+  { colKey: 'db_type', title: '数据库类型', width: 100 },
   { colKey: 'schema', title: 'Schema', sorter: true, width: 100 },
   { colKey: 'business_domain', title: '业务域', sorter: true, width: 100 },
   { colKey: 'classification', title: '分类', sorter: true, width: 80 },
@@ -329,6 +331,11 @@ function handlePageChange(pageInfo: { current: number }) {
 
 // ── Watchers: instant search (no debounce) ──
 watch(() => filters.query, () => {
+  search()
+})
+
+watch(() => localFilters.dbType, (val) => {
+  filters.db_type = val
   search()
 })
 
@@ -398,6 +405,17 @@ onMounted(async () => {
             >
               <option value="">全部 Schema</option>
               <option v-for="opt in schemaOptions" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+          </div>
+          <!-- Database Type dropdown -->
+          <div class="filter-select-wrap">
+            <select
+              v-model="localFilters.dbType"
+              class="filter-select"
+              :class="{ active: localFilters.dbType !== '' }"
+            >
+              <option value="">全部类型</option>
+              <option v-for="opt in apiFilterOpts.db_types" :key="opt" :value="opt">{{ opt }}</option>
             </select>
           </div>
           <span class="filter-sep" />
