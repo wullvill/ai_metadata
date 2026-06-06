@@ -26,7 +26,13 @@ export async function getFilterOptions(): Promise<{ success: boolean; data: Filt
 }
 
 export async function searchMetadata(params: SearchParams): Promise<SearchResponse> {
-  const { data } = await api.post('/search', params)
+  const { data } = await api.post('/search', {
+    query: params.query,
+    entity_type: params.entity_type,
+    db_type: params.db_type,
+    page: params.page,
+    page_size: params.page_size,
+  })
   return data
 }
 

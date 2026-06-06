@@ -11,6 +11,7 @@ export function useSearch() {
   const filters = reactive({
     query: '',
     entity_type: '' as string,
+    db_type: '',
   })
 
   const pagination = reactive({
@@ -25,6 +26,7 @@ export function useSearch() {
       const res = await searchMetadata({
         query: filters.query,
         entity_type: filters.entity_type || undefined,
+        db_type: filters.db_type || undefined,
         page: pagination.page,
         page_size: pagination.page_size,
       })

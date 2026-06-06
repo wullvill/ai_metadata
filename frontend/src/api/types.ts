@@ -6,6 +6,7 @@ export interface MetadataEntity {
   table_name: string
   column_name?: string
   data_type?: string
+  db_type?: string
   display_name?: string
   description?: string
   tags?: string[]
@@ -93,6 +94,7 @@ export interface ReviewDetail {
 export interface SearchParams {
   query: string
   entity_type?: string
+  db_type?: string
   page?: number
   page_size?: number
 }
@@ -147,4 +149,5 @@ export interface FilterOptions {
   systems: string[]
   databases: string[]
   schemas: string[]
+  db_types: string[]
 }
