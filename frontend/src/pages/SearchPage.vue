@@ -5,7 +5,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import type { TableProps, SortInfo } from 'tdesign-vue-next'
 import { useSearch } from '../composables/useSearch'
 import { useCompletion } from '../composables/useCompletion'
-import { getFilterOptions } from '../api'
+import { getFilterOptions, setSamples } from '../api'
 import type { MetadataEntity, TargetEntity, FilterOptions } from '../api/types'
 
 // ── Local extended type for fields the backend may return ──
@@ -263,6 +263,32 @@ function batchApplyCompletion() {
   selectedRowKeys.value = []
 }
 
+async function handleSampleToggle(entity: AssetDisplay, value: boolean) {
+  try {
+    await setSamples([entity.entity_id], value)
+    entity.is_sample = value
+    MessagePlugin.success(value ? '已设为样本' : '已取消样本')
+  } catch {
+    MessagePlugin.error('操作失败')
+  }
+}
+
+async function handleBatchSample(isSample: boolean) {
+  const ids = selectedRowKeys.value
+  if (ids.length === 0) return
+  try {
+    await setSamples(ids, isSample)
+    resultsAsDisplay.value.forEach(r => {
+      if (ids.includes(r.entity_id)) {
+        r.is_sample = isSample
+      }
+    })
+    MessagePlugin.success(isSample ? `已为 ${ids.length} 项设为样本` : `已为 ${ids.length} 项取消样本`)
+  } catch {
+    MessagePlugin.error('批量操作失败')
+  }
+}
+
 const batchDisabled = computed(() => selectedRowKeys.value.length === 0)
 
 // ── Sort handler ──
@@ -314,6 +340,7 @@ const columns: TableProps['columns'] = [
   { colKey: 'business_domain', title: '业务域', sorter: true, width: 100 },
   { colKey: 'classification', title: '分类', sorter: true, width: 80 },
   { colKey: 'completion_status', title: '补全状态', sorter: true, width: 100 },
+  { colKey: 'is_sample', title: '样本', width: 80 },
   { colKey: 'updated_time', title: '更新时间', sorter: true, width: 150 },
   { colKey: 'actions', title: '操作', width: 180 },
 ]
@@ -487,6 +514,20 @@ onMounted(async () => {
           <button
             class="ops-batch-btn"
             :disabled="batchDisabled"
+            @click="handleBatchSample(true)"
+          >
+            批量设为样本
+          </button>
+          <button
+            class="ops-batch-btn ops-batch-cancel"
+            :disabled="batchDisabled"
+            @click="handleBatchSample(false)"
+          >
+            批量取消样本
+          </button>
+          <button
+            class="ops-batch-btn"
+            :disabled="batchDisabled"
             @click="batchApplyCompletion"
           >
             批量申请补全
@@ -594,6 +635,15 @@ onMounted(async () => {
             >
               {{ completionLabel(completionStatus(row as AssetDisplay)) }}
             </t-tag>
+          </template>
+
+          <!-- Sample Toggle -->
+          <template #is_sample="{ row }">
+            <t-switch
+              :value="(row as AssetDisplay).is_sample"
+              size="small"
+              @change="(val: boolean) => handleSampleToggle(row as AssetDisplay, val)"
+            />
           </template>
 
           <!-- Updated Time -->
@@ -1076,6 +1126,17 @@ onMounted(async () => {
 
 :deep(.t-table__empty) {
   padding: 0;
+}
+
+.ops-batch-cancel {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-muted);
+}
+
+.ops-batch-cancel:hover:not(:disabled) {
+  border-color: #e34d59;
+  color: #e34d59;
 }
 
 /* ── Responsive ── */
