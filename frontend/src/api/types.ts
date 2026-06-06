@@ -11,6 +11,7 @@ export interface MetadataEntity {
   description?: string
   tags?: string[]
   has_description?: boolean
+  is_sample?: boolean
 }
 
 export interface TargetEntity {

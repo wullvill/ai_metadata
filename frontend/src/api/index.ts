@@ -95,3 +95,7 @@ export async function getAssetDetail(entityId: string): Promise<{ success: boole
   const { data } = await api.get(`/assets/${entityId}`)
   return data
 }
+
+export async function setSamples(entityIds: string[], isSample: boolean): Promise<void> {
+  await api.post('/samples/set', { entity_ids: entityIds, is_sample: isSample })
+}
