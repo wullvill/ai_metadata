@@ -8,6 +8,22 @@ settings = get_settings()
 
 INDEX_NAME = "metadata_index"
 
+COLUMNS_INDEX = "metadata_columns"
+
+COLUMNS_MAPPINGS = {
+    "properties": {
+        "column_id": {"type": "keyword"},
+        "entity_id": {"type": "keyword"},
+        "column_name": {"type": "text", "fields": {"raw": {"type": "keyword"}}},
+        "data_type": {"type": "keyword"},
+        "original_description": {"type": "text"},
+        "original_tags": {"type": "keyword"},
+        "completion_description": {"type": "text"},
+        "completion_tags": {"type": "keyword"},
+        "completion_time": {"type": "date"},
+    }
+}
+
 MAPPINGS = {
     "properties": {
         "entity_id": {"type": "keyword"},
@@ -139,20 +155,32 @@ def search_all(
     if data_type:
         must.append({"term": {"data_type": data_type}})
 
-    body = {
-        "query": {
-            "bool": {
-                "must": must,
-                "should": [
-                    {"multi_match": {
-                        "query": query_text,
-                        "fields": ["table_name^3", "column_name^3", "display_name^2", "description"],
-                        "fuzziness": "AUTO",
-                    }},
-                ],
-            }
-        },
-        "highlight": {
+    has_query = bool(query_text.strip())
+    has_filters = bool(must)
+
+    if not has_query and not has_filters:
+        body: dict = {"query": {"match_all": {}}, "size": top_k}
+    elif not has_query and has_filters:
+        body = {"query": {"bool": {"must": must}}, "size": top_k}
+    else:
+        body = {
+            "query": {
+                "bool": {
+                    "must": must,
+                    "should": [
+                        {"multi_match": {
+                            "query": query_text,
+                            "fields": ["table_name^3", "column_name^3", "display_name^2", "description"],
+                            "fuzziness": "AUTO",
+                        }},
+                    ],
+                }
+            },
+            "size": top_k,
+        }
+
+    if has_query:
+        body["highlight"] = {
             "fields": {
                 "table_name": {},
                 "column_name": {},
@@ -161,9 +189,7 @@ def search_all(
             },
             "pre_tags": ["<mark>"],
             "post_tags": ["</mark>"],
-        },
-        "size": top_k,
-    }
+        }
 
     resp = es.search(index=INDEX_NAME, body=body)
     return [
@@ -224,3 +250,71 @@ def _build_search_text(source: dict) -> str:
     if source.get("tags"):
         parts.append(f"标签:{','.join(source['tags'])}")
     return " | ".join(parts)
+
+
+def ensure_columns_index() -> None:
+    """Ensure metadata_columns index exists"""
+    es = get_es_client()
+    if not es.indices.exists(index=COLUMNS_INDEX):
+        es.indices.create(index=COLUMNS_INDEX, mappings=COLUMNS_MAPPINGS)
+        logger.info(f"Created ES index: {COLUMNS_INDEX}")
+
+
+def _normalize_datetime(value: str | None) -> str | None:
+    """Convert 'YYYY-MM-DD HH:MM' to ISO 'YYYY-MM-DDTHH:MM:SS' for ES date type"""
+    if not value:
+        return None
+    if "T" in value:
+        return value
+    # Convert "2026-05-18 08:30" to "2026-05-18T08:30:00"
+    return value.replace(" ", "T") + ":00"
+
+
+def index_columns(entity_id: str, columns: list[dict]) -> None:
+    """Batch index column documents"""
+    if not columns:
+        return
+    es = get_es_client()
+    actions = [
+        {
+            "_index": COLUMNS_INDEX,
+            "_id": f"{entity_id}.{col['name']}",
+            "_source": {
+                "column_id": f"{entity_id}.{col['name']}",
+                "entity_id": entity_id,
+                "column_name": col["name"],
+                "data_type": col.get("type", ""),
+                "original_description": col.get("origDesc", ""),
+                "original_tags": [t for t in col.get("origTag", "").split(",") if t.strip()] if col.get("origTag") else [],
+                "completion_description": col.get("compDesc", ""),
+                "completion_tags": [t for t in col.get("compTag", "").split(",") if t.strip()] if col.get("compTag") else [],
+                "completion_time": _normalize_datetime(col.get("compTime")),
+            },
+        }
+        for col in columns
+    ]
+    success, errors = helpers.bulk(es, actions, raise_on_error=False)
+    if errors:
+        logger.warning(f"ES columns bulk index: {success} ok, {len(errors)} errors")
+
+
+def get_columns(entity_id: str) -> list[dict]:
+    """Get all columns for a given entity"""
+    es = get_es_client()
+    body = {
+        "query": {"term": {"entity_id": entity_id}},
+        "size": 500,
+        "sort": [{"column_name.raw": "asc"}],
+    }
+    resp = es.search(index=COLUMNS_INDEX, body=body)
+    return [hit["_source"] for hit in resp["hits"]["hits"]]
+
+
+def get_asset_by_id(entity_id: str) -> dict | None:
+    """Get asset info by exact entity_id from metadata_index"""
+    es = get_es_client()
+    try:
+        resp = es.get(index=INDEX_NAME, id=entity_id)
+        return resp["_source"]
+    except Exception:
+        return None
