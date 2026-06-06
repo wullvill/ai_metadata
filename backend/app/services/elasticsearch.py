@@ -327,3 +327,21 @@ def get_asset_by_id(entity_id: str) -> dict | None:
         return resp["_source"]
     except NotFoundError:
         return None
+
+
+def set_sample_flag(entity_ids: list[str], is_sample: bool) -> int:
+    """批量设置/取消样本标记，返回更新数"""
+    if not entity_ids:
+        return 0
+    es = get_es_client()
+    resp = es.update_by_query(
+        index=INDEX_NAME,
+        body={
+            "query": {"terms": {"entity_id": entity_ids}},
+            "script": {
+                "source": f"ctx._source.is_sample = {'true' if is_sample else 'false'}"
+            },
+        },
+        refresh=True,
+    )
+    return resp.get("updated", 0)
