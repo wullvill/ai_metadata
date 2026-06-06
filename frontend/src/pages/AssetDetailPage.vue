@@ -5,7 +5,7 @@
         <router-link to="/search">资产目录</router-link> / {{ asset?.table_name || '...' }}
       </div>
       <h1 class="asset-name">{{ asset?.table_name || asset?.column_name || '...' }}</h1>
-      <p class="asset-subtitle">{{ entityTypeLabel }} · {{ asset?.database }}.{{ asset?.schema }}</p>
+      <p class="asset-subtitle">{{ entityTypeLabel }} · {{ asset?.database }}.{{ asset?.schema_name }}</p>
       <p class="asset-desc">{{ asset?.description || '暂无描述' }}</p>
       <div class="badge-row">
         <t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag>
@@ -21,8 +21,8 @@
             <div class="detail-row"><span class="detail-label">类型</span><span class="detail-value"><t-tag variant="light" theme="default">{{ entityTypeLabel }}</t-tag></span></div>
             <div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">{{ asset?.description || '—' }}</span></div>
             <div class="detail-row"><span class="detail-label">所属库</span><span class="detail-value mono">{{ asset?.database || '—' }}</span></div>
-            <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">{{ asset?.schema || '—' }}</span></div>
-            <div class="detail-row" v-if="asset?.entity_type === 'column'"><span class="detail-label">数据类型</span><span class="detail-value mono">{{ asset?.data_type || '—' }}</span></div>
+            <div class="detail-row"><span class="detail-label">Schema</span><span class="detail-value mono">{{ asset?.schema_name || '—' }}</span></div>
+
             <div class="detail-row"><span class="detail-label">标签</span><span class="detail-value">
               <t-tag v-for="tag in asset?.tags" :key="tag" variant="light" theme="default" style="margin-right:4px">{{ tag }}</t-tag>
               <span v-if="!asset?.tags?.length">—</span>
@@ -30,10 +30,27 @@
           </div>
         </t-tab-panel>
 
-        <t-tab-panel value="columns" label="列信息" v-if="asset?.entity_type !== 'column'">
+        <t-tab-panel value="columns" label="列信息">
           <div v-if="columns.length > 0">
             <p class="section-title">列信息 ({{ columns.length }} 列)</p>
-            <t-table :data="columns" :columns="columnTableDefs" row-key="name" bordered stripe size="small" />
+            <t-table :data="columns" :columns="columnTableDefs" row-key="column_id" bordered stripe size="small">
+              <template #original_tags="{ row }">
+                <t-tag v-for="tag in row.original_tags" :key="tag" variant="light" theme="default" size="small" style="margin-right:2px">
+                  {{ tag }}
+                </t-tag>
+                <span v-if="!row.original_tags?.length">—</span>
+              </template>
+              <template #completion_tags="{ row }">
+                <t-tag v-for="tag in row.completion_tags" :key="tag" variant="light" theme="primary" size="small" style="margin-right:2px">
+                  {{ tag }}
+                </t-tag>
+                <span v-if="!row.completion_tags?.length">—</span>
+              </template>
+              <template #completion_time="{ row }">
+                <span v-if="row.completion_time">{{ row.completion_time }}</span>
+                <span v-else>—</span>
+              </template>
+            </t-table>
           </div>
           <div v-else class="empty-state">
             <p>暂无列信息</p>
@@ -53,32 +70,41 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { searchMetadata } from '../api'
-import type { MetadataEntity } from '../api/types'
+import { getAssetDetail } from '../api'
+import type { AssetDetail, ColumnInfo } from '../api/types'
 
 const route = useRoute()
-const asset = ref<MetadataEntity | null>(null)
-const columns = ref<Array<{ name: string; dataType: string }>>([])
+const asset = ref<AssetDetail | null>(null)
+const columns = ref<ColumnInfo[]>([])
 const error = ref('')
 const activeTab = ref('info')
 
-const entityTypeLabel = computed(() => asset.value?.entity_type === 'column' ? '字段' : '表')
+const entityTypeLabel = computed(() => {
+  if (!asset.value) return ''
+  if (asset.value.entity_type === 'view') return '视图'
+  return '表'
+})
 const statusLabel = computed(() => asset.value?.has_description ? '已补全' : '待补全')
 const statusTheme = computed(() => asset.value?.has_description ? 'success' : 'warning')
 
 const columnTableDefs = [
-  { colKey: 'name', title: '列名', width: 200 },
-  { colKey: 'dataType', title: '类型', width: 150 },
+  { colKey: 'column_name', title: '列名', width: 180 },
+  { colKey: 'data_type', title: '数据类型', width: 130 },
+  { colKey: 'original_description', title: '原始描述', ellipsis: true, width: 160 },
+  { colKey: 'original_tags', title: '原始标签', width: 120 },
+  { colKey: 'completion_description', title: '补全描述', ellipsis: true, width: 180 },
+  { colKey: 'completion_tags', title: '补全标签', width: 120 },
+  { colKey: 'completion_time', title: '补全时间', width: 150 },
 ]
 
 onMounted(async () => {
   const id = route.params.id as string
   if (!id) { error.value = '缺少资产标识'; return }
   try {
-    const resp = await searchMetadata({ query: id, page_size: 1 })
-    const found = resp.data.find(e => e.table_name === id || e.column_name === id || e.entity_id === id)
-    if (!found) { error.value = '未找到该资产'; return }
-    asset.value = found
+    const resp = await getAssetDetail(id)
+    if (!resp.success || !resp.data) { error.value = '未找到该资产'; return }
+    asset.value = resp.data
+    columns.value = resp.data.columns || []
   } catch {
     error.value = '加载失败，请稍后重试'
   }

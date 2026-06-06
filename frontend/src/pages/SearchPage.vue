@@ -55,7 +55,7 @@ const sortState = reactive<SortInfo>({
 
 // ── Sort accessor map ──
 const SORT_ACCESSORS: Record<string, (row: AssetDisplay) => string> = {
-  name: (r) => (r.entity_type === 'column' ? (r.column_name || r.table_name) : (r.table_name || r.entity_id)),
+  name: (r) => (r.table_name || r.entity_id),
   system: (r) => r.system || r.database || '',
   entity_type: (r) => r.entity_type,
   database: (r) => r.database,
@@ -202,9 +202,6 @@ function typeLabel(entityType: string): string {
 
 // ── Asset helpers ──
 function assetName(entity: AssetDisplay): string {
-  if (entity.entity_type === 'column') {
-    return entity.column_name || entity.table_name
-  }
   return entity.table_name || entity.entity_id
 }
 
@@ -230,7 +227,7 @@ async function confirmCompletion() {
 
   const target: TargetEntity = {
     entity_id: entity.entity_id,
-    entity_type: entity.entity_type,
+    entity_type: entity.entity_type as 'table' | 'column',
     database: entity.database,
     schema: entity.schema,
     table_name: entity.table_name,
