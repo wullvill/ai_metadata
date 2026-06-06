@@ -199,6 +199,7 @@ def search_all(
     return [
         {
             **hit["_source"],
+            "schema": hit["_source"].get("schema_name"),
             "highlight": hit.get("highlight", {}),
         }
         for hit in resp["hits"]["hits"]

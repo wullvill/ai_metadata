@@ -49,7 +49,11 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     search_text = build_retrieval_text(target)
 
     # 向量化检索文本
-    query_embedding = await embedding.embed_text(search_text)
+    query_embedding = None
+    try:
+        query_embedding = await embedding.embed_text(search_text)
+    except Exception as e:
+        logger.warning(f"Embedding 失败，将降级到 ES-only 检索: {e}")
 
     # 并行双路检索
     db = target.get("database")
@@ -57,12 +61,14 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
 
     loop = asyncio.get_event_loop()
 
-    milvus_future = loop.run_in_executor(
-        None,
-        lambda: milvus.search_similar(
-            query_embedding, target["entity_type"], top_k=20, database=db
-        ),
-    )
+    milvus_future = None
+    if query_embedding is not None:
+        milvus_future = loop.run_in_executor(
+            None,
+            lambda: milvus.search_similar(
+                query_embedding, target["entity_type"], top_k=20, database=db
+            ),
+        )
 
     es_future = loop.run_in_executor(
         None,
@@ -84,11 +90,12 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     milvus_ok = False
     es_ok = False
 
-    try:
-        milvus_results = await milvus_future
-        milvus_ok = True
-    except Exception as e:
-        logger.warning(f"Milvus 检索失败，降级到 ES-only: {e}")
+    if milvus_future is not None:
+        try:
+            milvus_results = await milvus_future
+            milvus_ok = True
+        except Exception as e:
+            logger.warning(f"Milvus 检索失败，降级到 ES-only: {e}")
 
     try:
         es_results = await es_future

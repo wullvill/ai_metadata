@@ -237,7 +237,7 @@ async function confirmCompletion() {
     current_description: entity.description ?? null,
     current_display_name: entity.display_name ?? null,
     current_tags: entity.tags ?? null,
-    table_description: null,
+    table_description: entity.description ?? null,
     columns: null,
   }
 

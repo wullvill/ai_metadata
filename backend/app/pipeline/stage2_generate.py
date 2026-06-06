@@ -60,7 +60,7 @@ def _format_context_list(ctx_list: list[dict]) -> str:
 
 def _build_table_prompt(target: dict, state: CompletionState) -> str:
     """构建表级补全 Prompt"""
-    columns = target.get("columns", [])
+    columns = target.get("columns") or []
     columns_summary = ", ".join(
         f"{c.get('name', '?')}({c.get('dataType', '?')})" for c in columns[:20]
     )

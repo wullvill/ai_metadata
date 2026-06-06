@@ -19,6 +19,7 @@ export function useCompletion() {
       qualityCheck.value = res.quality_check
     } catch (e: any) {
       error.value = e.message || '补全失败'
+      throw e
     } finally {
       completing.value = false
     }
