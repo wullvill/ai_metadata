@@ -48,6 +48,10 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     target = state["target_entity"]
     search_text = build_retrieval_text(target)
 
+    from app.services.config_service import config_service
+    cfg = config_service.get_config()
+    retrieval = cfg["retrieval"]
+
     # 向量化检索文本
     query_embedding = None
     try:
@@ -66,21 +70,21 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
         milvus_future = loop.run_in_executor(
             None,
             lambda: milvus.search_similar(
-                query_embedding, target["entity_type"], top_k=20, database=db
+                query_embedding, target["entity_type"], top_k=retrieval["milvus_top_k"], database=db
             ),
         )
 
     es_future = loop.run_in_executor(
         None,
         lambda: elasticsearch.search_keyword(
-            search_text, target["entity_type"], database=db, schema_name=schema_name, top_k=20
+            search_text, target["entity_type"], database=db, schema_name=schema_name, top_k=retrieval["es_keyword_top_k"]
         ),
     )
 
     siblings_future = loop.run_in_executor(
         None,
         lambda: elasticsearch.search_siblings(
-            db, schema_name, target["entity_type"], top_k=5
+            db, schema_name, target["entity_type"], top_k=retrieval["es_siblings_top_k"]
         ),
     )
 
@@ -119,26 +123,27 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
         return state
 
     # 查询样本并置顶
-    try:
-        sample_docs = elasticsearch.get_samples()
-        if sample_docs:
-            logger.info(f"Stage 1: {len(sample_docs)} samples found, boosting rank")
-            for doc in sample_docs:
-                milvus_results.insert(0, {
-                    "entity_id": doc["entity_id"],
-                    "score": 1.0,
-                    "source": "sample",
-                    "table_name": doc.get("table_name"),
-                    "display_name": doc.get("display_name"),
-                    "description": doc.get("description"),
-                    "search_text": doc.get("description", doc.get("table_name", "")),
-                })
-    except Exception as e:
-        logger.warning(f"Stage 1: failed to fetch samples: {e}")
+    if retrieval["sample_boost"]:
+        try:
+            sample_docs = elasticsearch.get_samples()
+            if sample_docs:
+                logger.info(f"Stage 1: {len(sample_docs)} samples found, boosting rank")
+                for doc in sample_docs:
+                    milvus_results.insert(0, {
+                        "entity_id": doc["entity_id"],
+                        "score": 1.0,
+                        "source": "sample",
+                        "table_name": doc.get("table_name"),
+                        "display_name": doc.get("display_name"),
+                        "description": doc.get("description"),
+                        "search_text": doc.get("description", doc.get("table_name", "")),
+                    })
+        except Exception as e:
+            logger.warning(f"Stage 1: failed to fetch samples: {e}")
 
     # RRF 合并或单路降级
     if milvus_ok and es_ok:
-        merged = rrf_merge(milvus_results, es_results, top_n=15)
+        merged = rrf_merge(milvus_results, es_results, k=retrieval["rrf_k"], top_n=retrieval["rrf_top_n"])
     elif milvus_ok:
         merged = [{**item, "source": "milvus"} for item in milvus_results[:15]]
         logger.info("Stage 1 fallback: Milvus-only retrieval (ES unavailable)")

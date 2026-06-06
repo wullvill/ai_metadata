@@ -12,19 +12,22 @@ logger = get_logger(__name__)
 
 
 def select_model(entity_type: str, schema_context: list[dict], retrieved_context: list[dict]) -> str:
-    """Select model based on task complexity.
+    from app.services.config_service import config_service
+    cfg = config_service.get_config()
+    models_cfg = cfg["models"]
 
-    Table completion with rich context -> qwen-max
-    Otherwise -> qwen-plus (default)
-    """
+    if not models_cfg.get("auto_select", True):
+        return models_cfg.get("default", "qwen-plus")
+
     if entity_type == "table":
         rich_desc_count = sum(
             1 for s in schema_context
             if s.get("description") and len(s.get("description", "")) > 10
         )
-        if rich_desc_count > 5:
+        threshold = models_cfg.get("table_rich_threshold", 5)
+        if rich_desc_count > threshold:
             return "qwen-max"
-    return "qwen-plus"
+    return models_cfg.get("default", "qwen-plus")
 
 
 def parse_llm_json(raw_response: str) -> dict:

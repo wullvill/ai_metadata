@@ -86,9 +86,15 @@ def calculate_adjusted_confidence(result: dict, target: dict) -> float:
 
 
 def check_rules(result: dict, target: dict) -> list[dict]:
-    """Run rule engine checks. Returns list of violation dicts with rule name, severity, and message."""
+    from app.services.config_service import config_service
+    cfg = config_service.get_config()
+    rules_cfg = cfg.get("rules", {})
+
     violations = []
     for rule_name, rule in RULES.items():
+        rule_setting = rules_cfg.get(rule_name, {})
+        if not rule_setting.get("enabled", True):
+            continue
         passed = rule["check"](result, target)
         if not passed:
             violations.append({
@@ -128,13 +134,19 @@ def check_conflict(result: dict, target: dict) -> list[dict]:
 
 
 def decide_review_status(adjusted_confidence: float, violations: list[dict]) -> str:
-    """Route to auto_approved/pending_review/rejected based on adjusted confidence and violation severity."""
+    from app.services.config_service import config_service
+    cfg = config_service.get_config()
+    thresholds = cfg["thresholds"]
+
     has_critical = any(v["severity"] == "critical" for v in violations)
     has_warning = any(v["severity"] == "warning" for v in violations)
 
-    if has_critical or adjusted_confidence < 0.60:
+    auto_threshold = thresholds.get("auto_approve", 0.80)
+    review_threshold = thresholds.get("pending_review", 0.60)
+
+    if has_critical or adjusted_confidence < review_threshold:
         return "rejected"
-    elif adjusted_confidence >= 0.80 and not has_warning:
+    elif adjusted_confidence >= auto_threshold and not has_warning:
         return "auto_approved"
     else:
         return "pending_review"
