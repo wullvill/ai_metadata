@@ -235,7 +235,7 @@ async def approve_review(
     req: ReviewActionRequest | None = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """确认补全"""
+    """确认补全 — 表级审批级联通过所有字段，异步回写 ES"""
     result = await db.execute(
         select(CompletionRecord).where(CompletionRecord.id == record_id)
     )
@@ -244,19 +244,43 @@ async def approve_review(
         raise HTTPException(status_code=404, detail="记录不存在")
 
     reviewer = (req.reviewer if req and req.reviewer else "admin")
+    now = datetime.now(timezone.utc)
+
+    # 更新表记录
     record.review_status = "approved"
     record.reviewer = reviewer
     record.review_comment = req.comment if req else None
-    record.reviewed_at = datetime.now(timezone.utc)
+    record.reviewed_at = now
+
+    cascade_count = 0
+    if record.entity_type == "table":
+        prefix = record.entity_id + ".%"
+        col_result = await db.execute(
+            select(CompletionRecord).where(
+                CompletionRecord.entity_type == "column",
+                CompletionRecord.entity_id.like(prefix),
+            )
+        )
+        for col in col_result.scalars().all():
+            col.review_status = "approved"
+            col.reviewer = reviewer
+            col.reviewed_at = now
+            cascade_count += 1
+
     log = AuditLog(
         entity_id=record.entity_id, action="manual_approve",
         operator=reviewer,
-        detail={"record_id": record_id, "result": record.completion_result},
+        detail={"record_id": record_id, "cascade_columns": cascade_count},
     )
     db.add(log)
     await db.commit()
-    logger.info(f"Review approved: {record_id} -> {record.entity_id}")
-    return {"success": True, "data": {"status": "approved"}}
+
+    # 异步回写 ES
+    from app.jobs.es_sync import sync_approval_to_es
+    sync_approval_to_es.delay(record.id)
+
+    logger.info(f"Review approved: {record_id} -> {record.entity_id}, cascade={cascade_count}")
+    return {"success": True, "data": {"status": "approved", "cascade_columns": cascade_count}}
 
 
 @router.post("/{record_id}/modify")
