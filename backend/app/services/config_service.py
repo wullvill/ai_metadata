@@ -59,13 +59,17 @@ class ConfigService:
         return copy.deepcopy(DEFAULTS)
 
     async def load_from_db(self, session) -> dict:
-        """从 DB 加载配置到内存缓存，若无记录则写入默认值"""
+        """从 DB 加载配置到内存缓存，若无记录或配置为空则写入默认值"""
         result = await session.execute(
             select(PipelineConfig).where(PipelineConfig.id == 1)
         )
         row = result.scalar_one_or_none()
-        if row:
+        if row and row.config:
             ConfigService._cached = copy.deepcopy(row.config)
+        elif row:
+            row.config = copy.deepcopy(DEFAULTS)
+            await session.commit()
+            ConfigService._cached = copy.deepcopy(DEFAULTS)
         else:
             row = PipelineConfig(id=1, config=copy.deepcopy(DEFAULTS))
             session.add(row)

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:Bonc%401234@172.17.5.229:5432/metadata_completion"
 
     # 阿里云百炼
-    dashscope_api_key: str = ""
+    dashscope_api_key: str = "sk-a4663f488db84585aff4f9b0e28d767d"
 
     # Milvus
     milvus_host: str = "172.17.5.229"
@@ -26,11 +26,11 @@ class Settings(BaseSettings):
     om_jwt_token: str = ""
 
     # Redis
-    redis_url: str = "redis://:Bonc%401234@172.17.6.230:6379/0"
+    redis_url: str = "redis://:Bonc%401234@172.17.5.230:6379/0"
 
     # Celery
-    celery_broker_url: str = "redis://:Bonc%401234@172.17.6.230:6379/1"
-    celery_result_backend: str = "redis://:Bonc%401234@172.17.6.230:6379/2"
+    celery_broker_url: str = "redis://:Bonc%401234@172.17.5.230:6379/1"
+    celery_result_backend: str = "redis://:Bonc%401234@172.17.5.230:6379/2"
 
     # 质量校验阈值
     auto_approve_threshold: float = 0.80

@@ -58,6 +58,23 @@
           </div>
           <div v-else class="empty-state-sm">暂无质量校验结果</div>
         </t-tab-panel>
+
+        <t-tab-panel value="reference" label="检索参考">
+          <div v-if="refLoading" class="empty-state-sm"><t-loading size="small" text="加载参考数据..." /></div>
+          <template v-else-if="references.length">
+            <p class="info-section-title">检索参考上下文 — 相似元数据列表</p>
+            <div class="ref-list">
+              <div v-for="ref in references" :key="ref.entity_id" class="ref-item">
+                <span class="ref-name">{{ ref.entity_id }}</span>
+                <span class="ref-desc">{{ ref.display_name }}</span>
+                <span class="ref-sim" :style="simStyle(ref.similarity)">
+                  {{ (ref.similarity * 100).toFixed(0) }}%
+                </span>
+              </div>
+            </div>
+          </template>
+          <div v-else class="empty-state-sm">无相似元数据参考</div>
+        </t-tab-panel>
       </t-tabs>
     </div>
 
@@ -89,8 +106,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getReviewDetail, approveReview, rejectReview } from '../api'
-import type { ReviewDetail } from '../api/types'
+import { getReviewDetail, approveReview, rejectReview, getReviewReferences } from '../api'
+import type { ReviewDetail, ReferenceItem } from '../api/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -105,6 +122,24 @@ const rejectVisible = ref(false)
 const approveVisible = ref(false)
 const rejectReason = ref('')
 const rejectError = ref(false)
+
+const references = ref<ReferenceItem[]>([])
+const refLoading = ref(false)
+
+function simStyle(similarity: number) {
+  const hue = similarity >= 0.8 ? 145 : similarity >= 0.65 ? 75 : 250
+  return { color: `oklch(62% 0.18 ${hue})` }
+}
+
+async function loadReferences() {
+  if (!detail.value?.id) return
+  refLoading.value = true
+  try {
+    const res = await getReviewReferences(detail.value.id)
+    if (res.success) references.value = res.data
+  } catch { /* mute */ }
+  finally { refLoading.value = false }
+}
 
 const isPending = computed(() => detail.value?.review_status === 'pending_review')
 const entityTypeLabel = computed(() => detail.value?.entity_type === 'column' ? '字段' : '表')
@@ -142,6 +177,7 @@ onMounted(async () => {
     detail.value = resp.data
     const r = resp.data.completion_result
     if (r) { editDisplayName.value = r.display_name; editDesc.value = r.description; editTags.value = (r.tags || []).join(', ') }
+    loadReferences()
   } catch { error.value = '加载失败，请稍后重试' }
 })
 </script>
@@ -183,5 +219,14 @@ onMounted(async () => {
 .field-error { font-size: 12px; color: var(--td-error-color); margin-top: 8px; }
 .error-state { text-align: center; padding: 80px 24px; color: var(--td-text-color-placeholder); }
 .error-state h2 { font-size: 20px; margin: 8px 0 16px; }
+
+/* Reference list */
+.ref-list { border: 1px solid var(--td-border-level-2-color, #e7e7e7); border-radius: 8px; overflow: hidden; }
+.ref-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--td-border-level-2-color, #e7e7e7); font-size: 13px; }
+.ref-item:last-child { border-bottom: none; }
+.ref-item .ref-name { font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace; font-weight: 600; min-width: 140px; font-size: 12px; }
+.ref-item .ref-desc { color: var(--td-text-color-placeholder); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ref-item .ref-sim { font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+
 @media (max-width: 768px) { .compare-grid { grid-template-columns: 1fr; } }
 </style>

@@ -168,7 +168,7 @@ async function handleReset() {
             <t-input-number
               :value="config.models.table_rich_threshold"
               :min="1" :max="20" :step="1"
-              style="width: 100px"
+              style="width: 160px"
               @change="(v: number) => { config.models.table_rich_threshold = v; markDirty() }"
             />
             <p class="threshold-hint">表兄弟字段描述数超过此值时触发升级</p>
@@ -183,27 +183,27 @@ async function handleReset() {
         <div class="form-grid">
           <div class="form-item">
             <label>Milvus Top-K</label>
-            <t-input-number :value="config.retrieval.milvus_top_k" :min="5" :max="100" style="width: 100px"
+            <t-input-number :value="config.retrieval.milvus_top_k" :min="5" :max="100" style="width: 160px"
               @change="(v: number) => { config.retrieval.milvus_top_k = v; markDirty() }" />
           </div>
           <div class="form-item">
             <label>ES 关键词 Top-K</label>
-            <t-input-number :value="config.retrieval.es_keyword_top_k" :min="5" :max="100" style="width: 100px"
+            <t-input-number :value="config.retrieval.es_keyword_top_k" :min="5" :max="100" style="width: 160px"
               @change="(v: number) => { config.retrieval.es_keyword_top_k = v; markDirty() }" />
           </div>
           <div class="form-item">
             <label>ES 兄弟字段数</label>
-            <t-input-number :value="config.retrieval.es_siblings_top_k" :min="1" :max="50" style="width: 100px"
+            <t-input-number :value="config.retrieval.es_siblings_top_k" :min="1" :max="50" style="width: 160px"
               @change="(v: number) => { config.retrieval.es_siblings_top_k = v; markDirty() }" />
           </div>
           <div class="form-item">
             <label>RRF 常数 K</label>
-            <t-input-number :value="config.retrieval.rrf_k" :min="10" :max="200" style="width: 100px"
+            <t-input-number :value="config.retrieval.rrf_k" :min="10" :max="200" style="width: 160px"
               @change="(v: number) => { config.retrieval.rrf_k = v; markDirty() }" />
           </div>
           <div class="form-item">
             <label>RRF 最终数量</label>
-            <t-input-number :value="config.retrieval.rrf_top_n" :min="5" :max="50" style="width: 100px"
+            <t-input-number :value="config.retrieval.rrf_top_n" :min="5" :max="50" style="width: 160px"
               @change="(v: number) => { config.retrieval.rrf_top_n = v; markDirty() }" />
           </div>
           <div class="form-item">

@@ -19,7 +19,7 @@ export function useReview() {
     try {
       const res = await getReviewQueue({
         entity_type: filters.entity_type || undefined,
-        status: filters.status,
+        status: filters.status || undefined,
         page,
         page_size: pageSize,
       })

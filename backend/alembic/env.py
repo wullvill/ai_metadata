@@ -1,4 +1,5 @@
 import asyncio
+import re
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -14,8 +15,10 @@ target_metadata = Base.metadata
 
 from app.config import get_settings
 settings = get_settings()
-# Sync URL for offline mode (sqlite:///...)
-config.set_main_option("sqlalchemy.url", settings.database_url.replace("+aiosqlite", ""))
+# Strip async driver for offline mode, escape % for configparser
+sync_url = re.sub(r"\+(?:aiosqlite|asyncpg|aiomysql)", "", settings.database_url)
+sync_url = sync_url.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", sync_url)
 
 
 def run_migrations_offline() -> None:

@@ -154,6 +154,12 @@ export interface FilterOptions {
   db_types: string[]
 }
 
+export interface ReferenceItem {
+  entity_id: string
+  display_name: string
+  similarity: number
+}
+
 export interface PipelineConfig {
   thresholds: {
     auto_approve: number

@@ -57,3 +57,10 @@ def get_pipeline():
     if _pipeline is None:
         _pipeline = create_completion_graph()
     return _pipeline
+
+
+def get_stages():
+    """Return stage2 and stage3 functions for standalone use (column cascade)."""
+    from .stage2_generate import stage2_generate
+    from .stage3_quality import stage3_quality
+    return stage2_generate, stage3_quality
