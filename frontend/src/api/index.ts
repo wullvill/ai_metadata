@@ -8,6 +8,7 @@ import type {
   ReviewDetail,
   AssetDetail,
   PipelineConfig,
+  ReferenceItem,
 } from './types'
 
 const api = axios.create({
@@ -113,5 +114,15 @@ export async function updateConfig(partial: Partial<PipelineConfig>): Promise<{ 
 
 export async function getConfigDefaults(): Promise<{ success: boolean; data: PipelineConfig }> {
   const { data } = await api.get('/config/defaults')
+  return data
+}
+
+export async function getReviewReferences(recordId: string): Promise<{ success: boolean; data: ReferenceItem[] }> {
+  const { data } = await api.get(`/review/${recordId}/references`)
+  return data
+}
+
+export async function getRecordColumns(recordId: string): Promise<{ success: boolean; data: ReviewRecord[] }> {
+  const { data } = await api.get(`/review/${recordId}/columns`)
   return data
 }
