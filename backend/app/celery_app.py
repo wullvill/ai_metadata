@@ -8,7 +8,7 @@ celery_app = Celery(
     "metadata_completion",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.jobs.metadata_sync"],
+    include=["app.jobs.metadata_sync", "app.jobs.es_sync"],
 )
 
 celery_app.conf.update(
