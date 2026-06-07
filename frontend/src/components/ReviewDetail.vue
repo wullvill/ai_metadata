@@ -237,11 +237,69 @@
 
         <!-- Tab 4: 检索参考 -->
         <t-tab-panel value="reference" label="检索参考">
-          <div class="empty-note reference-placeholder">
-            <t-icon name="layers" size="32px" style="opacity: 0.3; margin-bottom: 8px" />
-            <p>检索参考数据暂未接入 API，敬请期待</p>
-            <p class="sub-note">该模块将展示相似元数据实体的检索结果，供审核时参考比对</p>
+          <div v-if="refLoading" class="empty-note">
+            <t-loading size="small" text="加载参考数据..." />
           </div>
+          <template v-else-if="references.length">
+            <div class="ref-list">
+              <div v-for="ref in references" :key="ref.entity_id" class="ref-item">
+                <span class="ref-name">{{ ref.entity_id }}</span>
+                <span class="ref-desc">{{ ref.display_name }}</span>
+                <span class="ref-sim" :style="simStyle(ref.similarity)">
+                  {{ (ref.similarity * 100).toFixed(0) }}%
+                </span>
+              </div>
+            </div>
+          </template>
+          <div v-else class="empty-note">无相似元数据参考</div>
+        </t-tab-panel>
+
+        <!-- Tab 5: 字段补全（仅表类型显示） -->
+        <t-tab-panel
+          v-if="detail.entity_type === 'table'"
+          value="columns"
+          label="字段补全"
+        >
+          <div v-if="columnsLoading" class="empty-note">
+            <t-loading size="small" text="加载字段补全数据..." />
+          </div>
+          <template v-else-if="columns.length">
+            <div class="columns-list">
+              <div
+                v-for="col in columns"
+                :key="col.id"
+                class="column-item"
+              >
+                <div class="column-item-top">
+                  <span class="column-name">{{ col.entity_id }}</span>
+                  <t-tag
+                    variant="light"
+                    :theme="col.review_status === 'pending_review' ? 'warning' : col.review_status === 'auto_approved' ? 'success' : 'default'"
+                    size="small"
+                  >
+                    {{ col.review_status === 'pending_review' ? '待审核' : col.review_status === 'auto_approved' ? '已自动采纳' : col.review_status === 'rejected' ? '系统拒绝' : col.review_status }}
+                  </t-tag>
+                </div>
+                <div class="column-item-body">
+                  <div class="column-field">
+                    <span class="column-field-label">建议中文名</span>
+                    <span class="column-field-value">{{ col.completion_result?.display_name || '—' }}</span>
+                  </div>
+                  <div class="column-field">
+                    <span class="column-field-label">描述</span>
+                    <span class="column-field-value muted">{{ col.completion_result?.description || '—' }}</span>
+                  </div>
+                  <div class="column-field">
+                    <span class="column-field-label">置信度</span>
+                    <span class="column-field-value mono" :style="{ color: col.completion_result?.confidence ? (col.completion_result.confidence >= 0.8 ? 'var(--td-success-color)' : col.completion_result.confidence >= 0.6 ? 'var(--td-warning-color)' : 'var(--td-error-color)') : 'var(--td-text-color-placeholder)' }">
+                      {{ col.completion_result?.confidence ? (col.completion_result.confidence * 100).toFixed(0) + '%' : '—' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="empty-note">暂无字段补全记录</div>
         </t-tab-panel>
       </t-tabs>
 
@@ -301,8 +359,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { approveReview, rejectReview, modifyReview } from '../api'
-import type { ReviewDetail as ReviewDetailType } from '../api/types'
+import { approveReview, rejectReview, modifyReview, getReviewReferences, getRecordColumns } from '../api'
+import type { ReviewDetail as ReviewDetailType, ReferenceItem, ReviewRecord } from '../api/types'
 
 const props = defineProps<{
   visible: boolean
@@ -329,6 +387,40 @@ const approveVisible = ref(false)
 const rejectReason = ref('')
 const rejectError = ref(false)
 
+// Reference state
+const references = ref<ReferenceItem[]>([])
+const refLoading = ref(false)
+
+// Columns state
+const columns = ref<ReviewRecord[]>([])
+const columnsLoading = ref(false)
+
+function simStyle(similarity: number) {
+  const hue = similarity >= 0.8 ? 145 : similarity >= 0.65 ? 75 : 250
+  const sat = similarity >= 0.65 ? '60%' : '30%'
+  return { color: `oklch(62% 0.18 ${hue})` }
+}
+
+async function loadReferences() {
+  if (!props.detail?.id || references.value.length) return
+  refLoading.value = true
+  try {
+    const res = await getReviewReferences(props.detail.id)
+    if (res.success) references.value = res.data
+  } catch { /* mute */ }
+  finally { refLoading.value = false }
+}
+
+async function loadColumns() {
+  if (!props.detail?.id || props.detail.entity_type !== 'table' || columns.value.length) return
+  columnsLoading.value = true
+  try {
+    const res = await getRecordColumns(props.detail.id)
+    if (res.success) columns.value = res.data
+  } catch { /* mute */ }
+  finally { columnsLoading.value = false }
+}
+
 // Init edit fields when detail loads
 watch(
   () => props.detail,
@@ -339,10 +431,17 @@ watch(
       editTags.value = (d.completion_result.tags || []).join(', ')
       modified.value = false
     }
+    references.value = []
+    columns.value = []
     activeTab.value = 'info'
+    if (d?.id) loadReferences()
   },
   { immediate: true },
 )
+
+watch(activeTab, (tab) => {
+  if (tab === 'columns') loadColumns()
+})
 
 // Computed labels
 const isPending = computed(() => props.detail?.review_status === 'pending_review')
@@ -704,22 +803,47 @@ async function handleModify() {
   text-align: center;
 }
 
-.reference-placeholder {
-  padding: 48px 24px;
+/* Reference list */
+.ref-list {
+  border: 1px solid var(--td-border-level-2-color, #e7e7e7);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ref-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--td-border-level-2-color, #e7e7e7);
+  font-size: 13px;
+  background: var(--td-bg-color-container);
 }
 
-.reference-placeholder p {
-  margin: 0;
+.ref-item:last-child {
+  border-bottom: none;
 }
 
-.reference-placeholder .sub-note {
+.ref-item .ref-name {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-weight: 600;
+  min-width: 140px;
   font-size: 12px;
+}
+
+.ref-item .ref-desc {
   color: var(--td-text-color-placeholder);
-  margin-top: 4px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-item .ref-sim {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 /* Dialog content */
@@ -733,6 +857,66 @@ async function handleModify() {
   font-size: 12px;
   color: var(--td-error-color);
   margin-top: 8px;
+}
+
+/* Columns list */
+.columns-list {
+  border: 1px solid var(--td-border-level-2-color, #e7e7e7);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.column-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--td-border-level-2-color, #e7e7e7);
+  background: var(--td-bg-color-container);
+}
+
+.column-item:last-child {
+  border-bottom: none;
+}
+
+.column-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.column-name {
+  font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--td-text-color-primary);
+}
+
+.column-item-body {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.column-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.column-field-label {
+  font-size: 11px;
+  color: var(--td-text-color-placeholder);
+}
+
+.column-field-value {
+  font-size: 13px;
+  color: var(--td-text-color-primary);
+}
+
+.column-field-value.muted {
+  color: var(--td-text-color-placeholder);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Responsive */
