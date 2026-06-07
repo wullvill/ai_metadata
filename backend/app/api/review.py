@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/review", tags=["review"])
 @router.get("/queue")
 async def get_review_queue(
     entity_type: str | None = None,
-    status: str = "pending_review",
+    status: str | None = None,
     confidence_min: float | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -24,7 +24,9 @@ async def get_review_queue(
     db: AsyncSession = Depends(get_db),
 ):
     """获取审核队列，支持筛选、排序和分页"""
-    query = select(CompletionRecord).where(CompletionRecord.review_status == status)
+    query = select(CompletionRecord)
+    if status:
+        query = query.where(CompletionRecord.review_status == status)
     if entity_type:
         query = query.where(CompletionRecord.entity_type == entity_type)
 
@@ -34,7 +36,9 @@ async def get_review_queue(
 
     order_col = getattr(CompletionRecord, sort_by)
     query = order_col.desc() if sort_dir == "desc" else order_col.asc()
-    query = select(CompletionRecord).where(CompletionRecord.review_status == status)
+    query = select(CompletionRecord)
+    if status:
+        query = query.where(CompletionRecord.review_status == status)
     if entity_type:
         query = query.where(CompletionRecord.entity_type == entity_type)
     if sort_dir == "desc":
@@ -74,6 +78,47 @@ async def get_review_queue(
     }
 
 
+@router.get("/{record_id}/columns")
+async def get_record_columns(record_id: str, db: AsyncSession = Depends(get_db)):
+    """获取表级审核记录关联的字段补全列表"""
+    result = await db.execute(
+        select(CompletionRecord).where(CompletionRecord.id == record_id)
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="审核记录不存在")
+
+    if record.entity_type != "table":
+        return {"success": True, "data": []}
+
+    prefix = record.entity_id + ".%"
+    result = await db.execute(
+        select(CompletionRecord)
+        .where(
+            CompletionRecord.entity_type == "column",
+            CompletionRecord.entity_id.like(prefix),
+        )
+        .order_by(CompletionRecord.entity_id)
+    )
+    columns = result.scalars().all()
+
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": c.id,
+                "entity_id": c.entity_id,
+                "entity_type": c.entity_type,
+                "completion_result": c.completion_result,
+                "quality_check": c.quality_check,
+                "review_status": c.review_status,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+            }
+            for c in columns
+        ],
+    }
+
+
 @router.get("/{record_id}")
 async def get_review_detail(record_id: str, db: AsyncSession = Depends(get_db)):
     """获取审核详情"""
@@ -98,6 +143,90 @@ async def get_review_detail(record_id: str, db: AsyncSession = Depends(get_db)):
             "synced_to_om": record.synced_to_om,
         },
     }
+
+
+@router.get("/{record_id}/references")
+async def get_review_references(record_id: str, db: AsyncSession = Depends(get_db)):
+    """获取审核记录的检索参考上下文（相似元数据实体列表）"""
+    result = await db.execute(
+        select(CompletionRecord).where(CompletionRecord.id == record_id)
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="审核记录不存在")
+
+    target = record.target_data or {}
+    search_text = _build_ref_search_text(target)
+    if not search_text:
+        return {"success": True, "data": []}
+
+    from app.services.elasticsearch import get_es_client
+    try:
+        es = get_es_client()
+        body = {
+            "query": {
+                "bool": {
+                    "must_not": [{"term": {"entity_id": record.entity_id}}],
+                    "should": [
+                        {"match": {"completion_description": {"query": search_text, "boost": 2}}},
+                        {"match": {"original_description": {"query": search_text, "boost": 1}}},
+                    ],
+                    "minimum_should_match": 1,
+                }
+            },
+            "size": 20,
+            "_source": ["entity_id", "completion_description", "original_description", "column_name"],
+        }
+        resp = es.search(index="metadata_columns", body=body)
+        hits = resp["hits"]["hits"]
+    except Exception as e:
+        logger.warning(f"ES search failed for references: {e}")
+        return {"success": True, "data": []}
+
+    # 去重：每个 entity_id 取最高分的一条
+    best: dict[str, dict] = {}
+    for hit in hits:
+        src = hit["_source"]
+        eid = src.get("entity_id", "")
+        score = hit["_score"] or 0
+        if eid not in best or score > best[eid]["similarity"]:
+            best[eid] = {
+                "entity_id": eid,
+                "display_name": _pick_display(src),
+                "similarity": round(_normalize_score(score), 4),
+            }
+
+    refs = sorted(best.values(), key=lambda x: x["similarity"], reverse=True)[:8]
+    return {"success": True, "data": refs}
+
+
+def _pick_display(src: dict) -> str:
+    """从 ES 文档中提取合适的展示文本"""
+    desc = src.get("completion_description") or src.get("original_description") or ""
+    return desc[:48] if desc else src.get("entity_id", "")
+
+
+def _build_ref_search_text(target: dict) -> str:
+    """从 target_data 构建中文检索文本"""
+    parts = []
+    desc = target.get("current_description") or target.get("table_description") or ""
+    if desc and desc.strip():
+        parts.append(desc.strip())
+    display = target.get("current_display_name") or ""
+    if display and display.strip():
+        parts.append(display.strip())
+    tags = target.get("current_tags") or []
+    if tags:
+        parts.extend(tags)
+    if target.get("table_name"):
+        parts.append(target["table_name"])
+    return " ".join(parts) if parts else ""
+
+
+def _normalize_score(es_score: float) -> float:
+    if es_score <= 0:
+        return 0.0
+    return round(min(es_score / (es_score + 5.0), 1.0), 4)
 
 
 @router.post("/{record_id}/approve")

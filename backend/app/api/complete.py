@@ -48,7 +48,7 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
             table_desc = (result.get("completion_result") or {}).get("description", "")
             for col in columns:
                 col_target = {
-                    "entity_id": col.get("column_id", f\"{target['entity_id']}.{col['column_name']}\"),
+                    "entity_id": col.get("column_id", f"{target['entity_id']}.{col['column_name']}"),
                     "entity_type": "column",
                     "database": target.get("database", ""),
                     "schema": target.get("schema", ""),
