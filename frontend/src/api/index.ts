@@ -79,7 +79,7 @@ export async function modifyReview(recordId: string, payload: {
   description?: string
   tags?: string[]
 }): Promise<{ success: boolean }> {
-  const { data } = await api.post(`/review/${recordId}/modify`, payload)
+  const { data } = await api.post(`/review/${recordId}/modify`, { modified_result: payload })
   return data
 }
 
