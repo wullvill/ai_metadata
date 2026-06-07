@@ -23,4 +23,7 @@ celery_app.conf.update(
     # process via greenlets. If the process crashes, all unacknowledged tasks
     # are re-delivered. Ensure every task registered here is idempotent.
     task_acks_late=True,
+    task_soft_time_limit=300,
+    task_time_limit=600,
+    worker_prefetch_multiplier=1,
 )
