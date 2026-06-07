@@ -1,4 +1,6 @@
 """Elasticsearch 服务"""
+from datetime import datetime, timezone
+
 from elasticsearch import Elasticsearch, helpers, NotFoundError
 from app.config import get_settings
 from app.utils.logger import get_logger
@@ -388,21 +390,20 @@ def update_completed_columns(entity_id: str, columns_data: list[dict]) -> int:
     if not columns_data:
         return 0
     es = get_es_client()
-    from datetime import datetime, timezone
-
-    updated = 0
-    for col in columns_data:
-        col_id = f"{entity_id}.{col['name']}"
-        try:
-            doc = {
+    actions = [
+        {
+            "_op_type": "update",
+            "_index": COLUMNS_INDEX,
+            "_id": f"{entity_id}.{col['name']}",
+            "doc": {
                 "completion_description": col.get("description", ""),
                 "completion_tags": col.get("tags", []),
                 "completion_time": datetime.now(timezone.utc).isoformat(),
-            }
-            es.update(index=COLUMNS_INDEX, id=col_id, doc=doc)
-            updated += 1
-        except NotFoundError:
-            logger.warning(f"Column ES update skipped: {col_id} not found")
-        except Exception as e:
-            logger.warning(f"Column ES update failed for {col_id}: {e}")
-    return updated
+            },
+        }
+        for col in columns_data
+    ]
+    success, errors = helpers.bulk(es, actions, raise_on_error=False)
+    if errors:
+        logger.warning(f"ES columns update: {success} ok, {len(errors)} errors")
+    return success
