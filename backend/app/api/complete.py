@@ -101,24 +101,9 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
 
 async def _fetch_columns(target: dict) -> list[dict]:
     """从 ES 获取表的字段列表"""
-    from app.services.elasticsearch import get_es_client
+    from app.services.elasticsearch import get_columns
     try:
-        es = get_es_client()
-        must = []
-        for field in ("database", "schema", "table_name"):
-            val = target.get(field)
-            if val:
-                must.append({"term": {field: val}})
-        if not must:
-            return []
-        body = {
-            "query": {"bool": {"must": must}},
-            "size": 200,
-            "_source": ["entity_id", "column_id", "column_name", "data_type",
-                        "original_description", "original_tags"],
-        }
-        resp = es.search(index="metadata_columns", body=body)
-        return [h["_source"] for h in resp["hits"]["hits"]]
+        return get_columns(target.get("entity_id", ""))
     except Exception as e:
         logger.warning(f"Failed to fetch columns for {target.get('entity_id')}: {e}")
         return []
