@@ -291,8 +291,8 @@
                   </div>
                   <div class="column-field">
                     <span class="column-field-label">置信度</span>
-                    <span class="column-field-value mono" :style="{ color: col.completion_result?.confidence ? (col.completion_result.confidence >= 0.8 ? 'var(--td-success-color)' : col.completion_result.confidence >= 0.6 ? 'var(--td-warning-color)' : 'var(--td-error-color)') : 'var(--td-text-color-placeholder)' }">
-                      {{ col.completion_result?.confidence ? (col.completion_result.confidence * 100).toFixed(0) + '%' : '—' }}
+                    <span class="column-field-value mono" :style="{ color: col.completion_result?.confidence != null ? (col.completion_result.confidence >= 0.8 ? 'var(--td-success-color)' : col.completion_result.confidence >= 0.6 ? 'var(--td-warning-color)' : 'var(--td-error-color)') : 'var(--td-text-color-placeholder)' }">
+                      {{ col.completion_result?.confidence != null ? (col.completion_result.confidence * 100).toFixed(0) + '%' : '—' }}
                     </span>
                   </div>
                 </div>
@@ -394,6 +394,7 @@ const refLoading = ref(false)
 // Columns state
 const columns = ref<ReviewRecord[]>([])
 const columnsLoading = ref(false)
+const columnsLoaded = ref(false)
 
 function simStyle(similarity: number) {
   const hue = similarity >= 0.8 ? 145 : similarity >= 0.65 ? 75 : 250
@@ -412,13 +413,13 @@ async function loadReferences() {
 }
 
 async function loadColumns() {
-  if (!props.detail?.id || props.detail.entity_type !== 'table' || columns.value.length) return
+  if (!props.detail?.id || props.detail.entity_type !== 'table' || columnsLoaded.value) return
   columnsLoading.value = true
   try {
     const res = await getRecordColumns(props.detail.id)
     if (res.success) columns.value = res.data
   } catch { /* mute */ }
-  finally { columnsLoading.value = false }
+  finally { columnsLoading.value = false; columnsLoaded.value = true }
 }
 
 // Init edit fields when detail loads
@@ -433,6 +434,7 @@ watch(
     }
     references.value = []
     columns.value = []
+    columnsLoaded.value = false
     activeTab.value = 'info'
     if (d?.id) loadReferences()
   },
