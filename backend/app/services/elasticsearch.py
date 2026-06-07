@@ -358,3 +358,51 @@ def get_samples() -> list[dict]:
         },
     )
     return [hit["_source"] for hit in resp["hits"]["hits"]]
+
+
+def update_completed_metadata(entity_id: str, completion_result: dict) -> bool:
+    """将审批通过的补全结果回写到 metadata_index。返回 True 表示成功。"""
+    es = get_es_client()
+    try:
+        doc = {
+            "display_name": completion_result.get("display_name", ""),
+            "description": completion_result.get("description", ""),
+            "tags": completion_result.get("tags", []),
+            "has_description": True,
+        }
+        es.update(index=INDEX_NAME, id=entity_id, doc=doc)
+        return True
+    except NotFoundError:
+        logger.warning(f"ES update skipped: {entity_id} not found in {INDEX_NAME}")
+        return False
+    except Exception as e:
+        logger.error(f"ES update failed for {entity_id}: {e}")
+        return False
+
+
+def update_completed_columns(entity_id: str, columns_data: list[dict]) -> int:
+    """批量回写字段补全结果到 metadata_columns。返回成功更新的数量。
+
+    columns_data 每项包含: name (列名), description, tags
+    """
+    if not columns_data:
+        return 0
+    es = get_es_client()
+    from datetime import datetime, timezone
+
+    updated = 0
+    for col in columns_data:
+        col_id = f"{entity_id}.{col['name']}"
+        try:
+            doc = {
+                "completion_description": col.get("description", ""),
+                "completion_tags": col.get("tags", []),
+                "completion_time": datetime.now(timezone.utc).isoformat(),
+            }
+            es.update(index=COLUMNS_INDEX, id=col_id, doc=doc)
+            updated += 1
+        except NotFoundError:
+            logger.warning(f"Column ES update skipped: {col_id} not found")
+        except Exception as e:
+            logger.warning(f"Column ES update failed for {col_id}: {e}")
+    return updated
