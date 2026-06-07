@@ -281,8 +281,11 @@ async def approve_review(
     db.add(log)
     await db.commit()
 
-    # 异步回写 ES
-    sync_approval_to_es.delay(record.id)
+    # 异步回写 ES（broker 不可达时静默失败，不影响审批结果）
+    try:
+        sync_approval_to_es.delay(record.id)
+    except Exception as e:
+        logger.warning(f"Failed to dispatch ES sync task: {e}")
 
     logger.info(f"Review approved: {record_id} -> {record.entity_id}, cascade={cascade_count}")
     return {"success": True, "data": {"status": "approved", "cascade_columns": cascade_count}}

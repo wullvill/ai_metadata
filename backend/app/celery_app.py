@@ -26,4 +26,5 @@ celery_app.conf.update(
     task_soft_time_limit=300,
     task_time_limit=600,
     worker_prefetch_multiplier=1,
+    broker_connection_timeout=5,
 )
