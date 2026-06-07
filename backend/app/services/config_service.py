@@ -12,7 +12,7 @@ DEFAULTS = {
         "pending_review": 0.60,
     },
     "models": {
-        "default": "qwen-plus",
+        "default": "qwen3.7-plus",
         "auto_select": True,
         "table_rich_threshold": 5,
     },

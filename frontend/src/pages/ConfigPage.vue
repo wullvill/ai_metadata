@@ -6,7 +6,7 @@ import type { PipelineConfig } from '../api/types'
 
 const config = reactive<PipelineConfig>({
   thresholds: { auto_approve: 0.80, pending_review: 0.60 },
-  models: { default: 'qwen-plus', auto_select: true, table_rich_threshold: 5 },
+  models: { default: 'qwen3.7-plus', auto_select: true, table_rich_threshold: 5 },
   retrieval: { milvus_top_k: 20, es_keyword_top_k: 20, es_siblings_top_k: 5, rrf_k: 60, rrf_top_n: 15, sample_boost: true },
   rules: {
     required_fields: { enabled: true },
@@ -24,7 +24,7 @@ const saving = ref(false)
 const dirty = ref(false)
 
 const modelOptions = [
-  { label: 'qwen-plus', value: 'qwen-plus' },
+  { label: 'qwen3.7-plus', value: 'qwen3.7-plus' },
   { label: 'qwen-max', value: 'qwen-max' },
   { label: 'qwen-turbo', value: 'qwen-turbo' },
 ]
