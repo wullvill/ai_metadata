@@ -1,4 +1,5 @@
 """审核 API"""
+import re
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -6,6 +7,7 @@ from datetime import datetime, timezone
 from app.database import get_db
 from app.models.completion import CompletionRecord, AuditLog
 from app.api.schemas import ReviewActionRequest, BatchRejectRequest
+from app.jobs.es_sync import sync_approval_to_es
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -243,6 +245,9 @@ async def approve_review(
     if not record:
         raise HTTPException(status_code=404, detail="记录不存在")
 
+    if record.review_status == "approved":
+        return {"success": True, "data": {"status": "already_approved", "message": "该记录已审批通过"}}
+
     reviewer = (req.reviewer if req and req.reviewer else "admin")
     now = datetime.now(timezone.utc)
 
@@ -254,7 +259,8 @@ async def approve_review(
 
     cascade_count = 0
     if record.entity_type == "table":
-        prefix = record.entity_id + ".%"
+        escaped = re.sub(r"([%_])", r"\\\1", record.entity_id)
+        prefix = escaped + ".%"
         col_result = await db.execute(
             select(CompletionRecord).where(
                 CompletionRecord.entity_type == "column",
@@ -276,7 +282,6 @@ async def approve_review(
     await db.commit()
 
     # 异步回写 ES
-    from app.jobs.es_sync import sync_approval_to_es
     sync_approval_to_es.delay(record.id)
 
     logger.info(f"Review approved: {record_id} -> {record.entity_id}, cascade={cascade_count}")
