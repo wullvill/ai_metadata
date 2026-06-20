@@ -332,6 +332,7 @@
       v-model:visible="rejectVisible"
       header="驳回补全建议"
       attach="body"
+      :z-index="2600"
       :on-confirm="doReject"
       :confirm-btn="{ content: '确认驳回', theme: 'danger' }"
     >
@@ -349,6 +350,7 @@
       v-model:visible="approveVisible"
       header="确认采纳补全建议"
       attach="body"
+      :z-index="2600"
       :on-confirm="doApprove"
     >
       <p>确认采纳「{{ detail.entity_id }}」的 AI 补全建议？将回写至 OpenMetadata。</p>
