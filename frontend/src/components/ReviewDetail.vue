@@ -894,7 +894,7 @@ async function handleModify() {
 
 .column-item-body {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 100px 1fr 70px;
   gap: 8px;
 }
 
@@ -902,6 +902,7 @@ async function handleModify() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .column-field-label {
