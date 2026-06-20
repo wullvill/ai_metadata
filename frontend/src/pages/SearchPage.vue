@@ -250,6 +250,7 @@ async function confirmCompletion() {
   try {
     await triggerComplete(target)
     MessagePlugin.success('补全申请已提交')
+    search()
   } catch {
     MessagePlugin.error('补全申请失败')
   }
