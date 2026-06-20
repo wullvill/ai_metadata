@@ -114,30 +114,36 @@ function handleDetailRefresh() {
   handleRefresh()
 }
 
-async function handleApprove(id: string) {
-  try {
-    await DialogPlugin.confirm({
-      header: '确认采纳',
-      body: '确定采纳此 AI 补全建议？系统将自动回写 OpenMetadata。',
-    })
-    await approve(id)
-    MessagePlugin.success('已确认采纳')
-  } catch {
-    MessagePlugin.error('操作失败')
-  }
+function handleApprove(id: string) {
+  const dialog = DialogPlugin.confirm({
+    header: '确认采纳',
+    body: '确定采纳此 AI 补全建议？系统将自动回写 OpenMetadata。',
+    onConfirm: async () => {
+      dialog.hide()
+      try {
+        await approve(id)
+        MessagePlugin.success('已确认采纳')
+      } catch {
+        MessagePlugin.error('操作失败')
+      }
+    },
+  })
 }
 
-async function handleReject(id: string) {
-  try {
-    await DialogPlugin.confirm({
-      header: '确认拒绝',
-      body: '确定拒绝此补全建议？此操作将仅记录日志，不会回写 OpenMetadata。',
-    })
-    await reject(id, '人工拒绝')
-    MessagePlugin.success('已拒绝')
-  } catch {
-    MessagePlugin.error('操作失败')
-  }
+function handleReject(id: string) {
+  const dialog = DialogPlugin.confirm({
+    header: '确认拒绝',
+    body: '确定拒绝此补全建议？此操作将仅记录日志，不会回写 OpenMetadata。',
+    onConfirm: async () => {
+      dialog.hide()
+      try {
+        await reject(id, '人工拒绝')
+        MessagePlugin.success('已拒绝')
+      } catch {
+        MessagePlugin.error('操作失败')
+      }
+    },
+  })
 }
 
 async function handleBatchApprove() {
