@@ -40,6 +40,7 @@ MAPPINGS = {
         "db_type": {"type": "keyword"},
         "tags": {"type": "keyword"},
         "has_description": {"type": "boolean"},
+        "completion_status": {"type": "keyword"},
     }
 }
 
@@ -371,6 +372,7 @@ def update_completed_metadata(entity_id: str, completion_result: dict) -> bool:
             "description": completion_result.get("description", ""),
             "tags": completion_result.get("tags", []),
             "has_description": True,
+            "completion_status": "completed",
         }
         es.update(index=INDEX_NAME, id=entity_id, doc=doc)
         return True

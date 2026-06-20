@@ -666,9 +666,10 @@ onMounted(async () => {
                 theme="primary"
                 variant="base"
                 size="small"
+                :disabled="completionStatus(row as AssetDisplay) !== 'pending'"
                 @click="handleSingleComplete(row as AssetDisplay)"
               >
-                补全申请
+                {{ completionStatus(row as AssetDisplay) !== 'pending' ? (completionStatus(row as AssetDisplay) === 'processing' ? '处理中' : '已补全') : '补全申请' }}
               </t-button>
             </div>
           </template>

@@ -6,6 +6,7 @@ from app.pipeline.graph import get_pipeline, get_stages
 from app.models.completion import CompletionRecord
 from app.api.schemas import CompletionTriggerRequest, CompletionResponse
 from app.utils.logger import get_logger
+from app.services.elasticsearch import get_es_client, INDEX_NAME
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/complete", tags=["complete"])
@@ -87,6 +88,13 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
 
     await db.commit()
     await db.refresh(record)
+
+    # 同步标记 ES 为处理中
+    try:
+        es = get_es_client()
+        es.update(index=INDEX_NAME, id=target["entity_id"], doc={"completion_status": "processing"})
+    except Exception:
+        pass
 
     return CompletionResponse(
         record_id=record.id,
