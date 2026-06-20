@@ -25,6 +25,9 @@
         >{{ (row.completion_result.confidence * 100).toFixed(0) }}%</span>
         <span v-else class="cell-mono">—</span>
       </template>
+      <template #created_at="{ row }">
+        <span class="cell-mono">{{ formatTime(row.created_at) }}</span>
+      </template>
       <template #entity_type="{ row }">
         <t-tag :theme="row.entity_type === 'table' ? 'primary' : 'success'" size="small">
           {{ row.entity_type === 'table' ? '表' : '字段' }}
@@ -63,6 +66,12 @@ const emit = defineEmits<{
   reject: [id: string]
   'update:selectedIds': [ids: string[]]
 }>()
+
+function formatTime(iso: string | null | undefined): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+}
 
 const selectedIds = ref<string[]>([])
 

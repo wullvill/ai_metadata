@@ -83,6 +83,12 @@ const columns = [
   { colKey: 'created_at', title: '提交时间', width: 160 },
 ]
 
+function formatTime(iso: string | null | undefined): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+}
+
 function handlePageChange(pageInfo: { current: number }) {
   filters.value.page = pageInfo.current
   loadHistory(false)
@@ -209,7 +215,7 @@ function handlePageChange(pageInfo: { current: number }) {
         </template>
 
         <template #created_at="{ row }">
-          {{ row.created_at ? new Date(row.created_at).toLocaleString('zh-CN') : '-' }}
+          {{ formatTime(row.created_at) }}
         </template>
 
         <template #expandedRow="{ row }">

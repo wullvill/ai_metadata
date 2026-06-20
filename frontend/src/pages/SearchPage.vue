@@ -194,6 +194,12 @@ function completionLabel(status: string): string {
   return map[status] || status
 }
 
+function formatTime(iso: string | undefined | null): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+}
+
 function typeLabel(entityType: string): string {
   const map: Record<string, string> = {
     table: '表', column: '字段', view: '视图',
@@ -648,7 +654,7 @@ onMounted(async () => {
 
           <!-- Updated Time -->
           <template #updated_time="{ row }">
-            <span class="cell-mono">{{ (row as AssetDisplay).updated_time || '-' }}</span>
+            <span class="cell-mono">{{ formatTime((row as AssetDisplay).updated_time) }}</span>
           </template>
 
           <!-- Actions -->
