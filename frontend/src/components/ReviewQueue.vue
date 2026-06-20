@@ -35,10 +35,10 @@
       </template>
       <template #actions="{ row }">
         <t-space>
-          <t-button theme="primary" variant="text" size="small" @click.stop="$emit('approve', row.id)">
+          <t-button theme="primary" variant="text" size="small" :disabled="row.review_status !== 'pending_review'" @click.stop="$emit('approve', row.id)">
             确认
           </t-button>
-          <t-button theme="danger" variant="text" size="small" @click.stop="$emit('reject', row.id)">
+          <t-button theme="danger" variant="text" size="small" :disabled="row.review_status !== 'pending_review'" @click.stop="$emit('reject', row.id)">
             拒绝
           </t-button>
         </t-space>
