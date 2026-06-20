@@ -42,6 +42,7 @@ MAPPINGS = {
         "has_description": {"type": "boolean"},
         "completion_status": {"type": "keyword"},
         "completion_time": {"type": "date"},
+        "updated_time": {"type": "date"},
     }
 }
 
@@ -375,6 +376,7 @@ def update_completed_metadata(entity_id: str, completion_result: dict) -> bool:
             "has_description": True,
             "completion_status": "completed",
             "completion_time": datetime.now(timezone.utc).isoformat(),
+            "updated_time": datetime.now(timezone.utc).isoformat(),
         }
         es.update(index=INDEX_NAME, id=entity_id, doc=doc)
         return True

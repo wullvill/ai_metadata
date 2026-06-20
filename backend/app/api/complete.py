@@ -5,6 +5,8 @@ from app.database import get_db
 from app.pipeline.graph import get_pipeline, get_stages
 from app.models.completion import CompletionRecord
 from app.api.schemas import CompletionTriggerRequest, CompletionResponse
+from datetime import datetime, timezone
+
 from app.utils.logger import get_logger
 from app.services.elasticsearch import get_es_client, INDEX_NAME
 
@@ -92,7 +94,10 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
     # 同步标记 ES 为处理中
     try:
         es = get_es_client()
-        es.update(index=INDEX_NAME, id=target["entity_id"], doc={"completion_status": "processing"})
+        es.update(index=INDEX_NAME, id=target["entity_id"], doc={
+            "completion_status": "processing",
+            "updated_time": datetime.now(timezone.utc).isoformat(),
+        })
     except Exception:
         pass
 
