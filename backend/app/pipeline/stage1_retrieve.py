@@ -66,11 +66,19 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     loop = asyncio.get_event_loop()
 
     milvus_future = None
+    design_future = None
     if query_embedding is not None:
         milvus_future = loop.run_in_executor(
             None,
             lambda: milvus.search_similar(
                 query_embedding, target["entity_type"], top_k=retrieval["milvus_top_k"], database=db
+            ),
+        )
+        # 同时检索设计文档作为补全参考
+        design_future = loop.run_in_executor(
+            None,
+            lambda: milvus.search_similar(
+                query_embedding, "table_design", top_k=3, database=None
             ),
         )
 
@@ -100,6 +108,15 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
             milvus_ok = True
         except Exception as e:
             logger.warning(f"Milvus 检索失败，降级到 ES-only: {e}")
+
+    # 获取设计文档作为补全参考
+    design_results: list[dict] = []
+    if design_future is not None:
+        try:
+            design_results = await design_future
+            logger.info(f"Stage 1: {len(design_results)} design docs retrieved from Milvus")
+        except Exception as e:
+            logger.warning(f"Design doc retrieval failed: {e}")
 
     try:
         es_results = await es_future
@@ -140,6 +157,11 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
                     })
         except Exception as e:
             logger.warning(f"Stage 1: failed to fetch samples: {e}")
+
+    # 将设计文档加入 Milvus 结果，供 LLM 补全时参考字段命名和描述规范
+    for doc in design_results:
+        doc["source"] = "milvus_design"
+        milvus_results.append(doc)
 
     # RRF 合并或单路降级
     if milvus_ok and es_ok:

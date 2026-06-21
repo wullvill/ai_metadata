@@ -5,6 +5,7 @@
 | 属性 | 值 |
 |------|-----|
 | 表名 | fact_comply |
+| entity_type | table |
 | 中文名 | 合规事实表 |
 | 所属系统 | 合规系统 |
 | 数据库 | dwd_comply |

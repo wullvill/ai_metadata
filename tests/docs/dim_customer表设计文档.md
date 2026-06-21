@@ -5,6 +5,7 @@
 | 属性 | 值 |
 |------|-----|
 | 表名 | dim_customer |
+| entity_type | table |
 | 中文名 | 客户维度表 |
 | 所属系统 | 主数据系统 |
 | 数据库 | dwd_master |
@@ -20,19 +21,19 @@
 
 ## 字段设计
 
-| 序号 | 字段名 | 中文名 | 数据类型 | 长度 | 精度 | 主键 | 非空 | 默认值 | 说明 |
-|------|--------|--------|----------|------|------|------|------|--------|------|
-| 1 | customer_id | 客户ID | VARCHAR | 32 | - | PK | NOT NULL | - | 客户唯一标识，主键 |
-| 2 | customer_name | 客户名称 | VARCHAR | 128 | - | - | NOT NULL | - | 客户名称/企业名称 |
-| 3 | customer_type | 客户类型 | VARCHAR | 32 | - | - | - | '个人' | 客户类型：个人/企业/政府/其他 |
-| 4 | gender | 性别 | VARCHAR | 8 | - | - | - | - | 性别：男/女/未知 |
-| 5 | birth_date | 出生日期 | DATE | - | - | - | - | - | 出生日期 |
-| 6 | city | 所在城市 | VARCHAR | 64 | - | - | - | - | 客户所在城市 |
-| 7 | province | 所在省份 | VARCHAR | 64 | - | - | - | - | 客户所在省份 |
-| 8 | email | 电子邮箱 | VARCHAR | 128 | - | - | - | - | 客户电子邮箱地址 |
-| 9 | phone | 联系电话 | VARCHAR | 20 | - | - | - | - | 客户联系电话 |
-| 10 | create_date | 创建日期 | DATE | - | - | - | NOT NULL | CURRENT_DATE | 记录创建日期 |
-| 11 | update_date | 更新日期 | DATE | - | - | - | - | - | 记录最后更新日期 |
+| 序号 | 字段名 | 中文名 | 数据类型 | 长度 | 精度 | 主键 | 非空 | 默认值 | 说明                          |
+|------|--------|--------|----------|------|------|------|------|--------|-----------------------------|
+| 1 | customer_id | 客户ID | VARCHAR | 32 | - | PK | NOT NULL | - | 客户唯一标识，主键                   |
+| 2 | customer_name | 客户名称 | VARCHAR | 128 | - | - | NOT NULL | - | 客户姓名/企业名称                   |
+| 3 | customer_type | 客户类型 | VARCHAR | 32 | - | - | - | '个人' | 客户类型：个人/企业/政府/其他            |
+| 4 | gender | 性别 | VARCHAR | 8 | - | - | - | - | 性别：男/女/未知                   |
+| 5 | birth_date | 出生日期 | DATE | - | - | - | - | - | 出生日期                        |
+| 6 | city | 所在城市 | VARCHAR | 64 | - | - | - | - | 客户所在城市                      |
+| 7 | province | 所在省份 | VARCHAR | 64 | - | - | - | - | 客户所在省份                      |
+| 8 | email | 电子邮箱 | VARCHAR | 128 | - | - | - | - | 客户电子邮箱地址                    |
+| 9 | phone | 联系电话 | VARCHAR | 20 | - | - | - | - | 客户联系电话                      |
+| 10 | create_date | 创建日期 | DATE | - | - | - | NOT NULL | CURRENT_DATE | 记录创建日期                      |
+| 11 | update_date | 更新日期 | DATE | - | - | - | - | - | 记录最后更新日期                    |
 | 12 | status | 状态 | VARCHAR | 16 | - | - | NOT NULL | 'active' | 客户状态：active-活跃/inactive-非活跃 |
 
 ## 索引设计
