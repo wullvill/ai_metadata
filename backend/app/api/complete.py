@@ -101,6 +101,14 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
     except Exception:
         pass
 
+    # 自动采纳：异步回写 ES（与人工审批逻辑一致）
+    if record.review_status == "auto_approved":
+        try:
+            from app.jobs.es_sync import sync_approval_to_es
+            sync_approval_to_es.delay(record.id)
+        except Exception as e:
+            logger.warning(f"Failed to dispatch ES sync for auto_approved {record.id}: {e}")
+
     return CompletionResponse(
         record_id=record.id,
         entity_id=record.entity_id,

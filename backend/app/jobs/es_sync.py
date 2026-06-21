@@ -2,7 +2,7 @@
 from app.celery_app import celery_app
 from app.database import SessionLocal
 from app.models.completion import CompletionRecord
-from app.services.elasticsearch import update_completed_metadata, update_completed_columns
+from app.services.elasticsearch import reset_completion_status, update_completed_metadata, update_completed_columns
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -56,3 +56,15 @@ def sync_approval_to_es(self, record_id: str):
         raise self.retry(exc=e)
     finally:
         db.close()
+
+
+@celery_app.task(name="es_reset_asset_pending", bind=True, max_retries=3, default_retry_delay=60)
+def reset_asset_to_pending(self, entity_id: str):
+    """审核拒绝后异步重置 ES 资产状态为待补全"""
+    try:
+        ok = reset_completion_status(entity_id)
+        logger.info(f"ES reset done: {entity_id} ok={ok}")
+        return {"status": "done", "entity_id": entity_id, "ok": ok}
+    except Exception as e:
+        logger.error(f"reset_asset_to_pending failed for {entity_id}: {e}")
+        raise self.retry(exc=e)

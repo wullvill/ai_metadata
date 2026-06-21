@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from app.database import get_db
 from app.models.completion import CompletionRecord, AuditLog
 from app.api.schemas import ReviewActionRequest, BatchRejectRequest
-from app.jobs.es_sync import sync_approval_to_es
+from app.jobs.es_sync import sync_approval_to_es, reset_asset_to_pending
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -351,6 +351,14 @@ async def reject_review(
     )
     db.add(log)
     await db.commit()
+
+    # 异步重置 ES 资产状态为待补全
+    try:
+        reset_asset_to_pending.delay(record.entity_id)
+    except Exception as e:
+        logger.warning(f"Failed to dispatch ES reset task: {e}")
+
+    logger.info(f"Review rejected: {record_id} -> {record.entity_id}")
     return {"success": True, "data": {"status": "rejected"}}
 
 
@@ -391,4 +399,16 @@ async def batch_reject(req: BatchRejectRequest, db: AsyncSession = Depends(get_d
             db.add(log)
             count += 1
     await db.commit()
+
+    # 异步重置 ES 资产状态为待补全
+    for rid in req.record_ids:
+        result = await db.execute(select(CompletionRecord).where(CompletionRecord.id == rid))
+        record = result.scalar_one_or_none()
+        if record:
+            try:
+                reset_asset_to_pending.delay(record.entity_id)
+            except Exception as e:
+                logger.warning(f"Failed to dispatch ES reset task for {rid}: {e}")
+
+    logger.info(f"Batch rejected: {count} records")
     return {"success": True, "data": {"count": count}}

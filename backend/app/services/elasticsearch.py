@@ -388,6 +388,24 @@ def update_completed_metadata(entity_id: str, completion_result: dict) -> bool:
         return False
 
 
+def reset_completion_status(entity_id: str) -> bool:
+    """将资产的补全状态重置为待补全。返回 True 表示成功。"""
+    es = get_es_client()
+    try:
+        doc = {
+            "completion_status": "pending",
+            "updated_time": datetime.now(timezone.utc).isoformat(),
+        }
+        es.update(index=INDEX_NAME, id=entity_id, doc=doc)
+        return True
+    except NotFoundError:
+        logger.warning(f"ES reset skipped: {entity_id} not found in {INDEX_NAME}")
+        return False
+    except Exception as e:
+        logger.error(f"ES reset failed for {entity_id}: {e}")
+        return False
+
+
 def update_completed_columns(entity_id: str, columns_data: list[dict]) -> int:
     """批量回写字段补全结果到 metadata_columns。返回成功更新的数量。
 

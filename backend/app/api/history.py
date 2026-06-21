@@ -1,4 +1,5 @@
 """补全历史查询 API"""
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -26,9 +27,11 @@ async def get_completion_history(
     if status:
         query = query.where(CompletionRecord.review_status == status)
     if start_date:
-        query = query.where(CompletionRecord.created_at >= start_date)
+        start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        query = query.where(CompletionRecord.created_at >= start_dt)
     if end_date:
-        query = query.where(CompletionRecord.created_at <= end_date)
+        end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) + timedelta(days=1)
+        query = query.where(CompletionRecord.created_at < end_dt)
 
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)

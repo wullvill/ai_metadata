@@ -86,10 +86,12 @@ export async function modifyReview(recordId: string, payload: {
 export async function getCompletionHistory(params: {
   entity_id?: string
   status?: string
+  start_date?: string
+  end_date?: string
   page?: number
   limit?: number
 }): Promise<{ success: boolean; data: ReviewRecord[]; meta?: { total: number } }> {
-  const { data } = await api.get('/review/queue', { params: { ...params, page_size: params.limit } })
+  const { data } = await api.get('/complete/history', { params: { ...params } })
   return data
 }
 

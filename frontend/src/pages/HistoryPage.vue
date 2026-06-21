@@ -10,13 +10,23 @@ const total = ref(0)
 const loading = ref(false)
 
 const filters = ref<HistoryParams>({
-  status: undefined,
+  status: '',
   entity_id: '',
-  start_date: undefined,
-  end_date: undefined,
+  start_date: getDefaultStartDate(),
+  end_date: getDefaultEndDate(),
   page: 1,
   limit: 20,
 })
+
+function getDefaultStartDate(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 30)
+  return d.toISOString().slice(0, 10)
+}
+
+function getDefaultEndDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}
 
 const searchQuery = ref('')
 const debounceTimer = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -59,7 +69,7 @@ const filteredRecords = computed(() => records.value)
 const filteredTotal = computed(() => filteredRecords.value.length)
 
 function setStatusFilter(value: string) {
-  filters.value.status = value || undefined
+  filters.value.status = value
   loadHistory()
 }
 
@@ -70,8 +80,8 @@ function handleRefresh() {
 }
 
 function clearDates() {
-  filters.value.start_date = undefined
-  filters.value.end_date = undefined
+  filters.value.start_date = getDefaultStartDate()
+  filters.value.end_date = getDefaultEndDate()
   loadHistory()
 }
 
@@ -123,7 +133,7 @@ function handlePageChange(pageInfo: { current: number }) {
             <select
               v-model="filters.status"
               class="filter-select"
-              :class="{ active: filters.status !== '' && filters.status !== undefined }"
+              :class="{ active: filters.status !== '' }"
               @change="setStatusFilter(($event.target as HTMLSelectElement).value)"
             >
               <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
@@ -150,7 +160,6 @@ function handlePageChange(pageInfo: { current: number }) {
             />
           </div>
           <button
-            v-if="filters.start_date || filters.end_date"
             class="filter-chip"
             @click="clearDates"
           >
