@@ -353,7 +353,7 @@
       :z-index="2600"
       :on-confirm="doApprove"
     >
-      <p>确认采纳「{{ detail.entity_id }}」的 AI 补全建议？将回写至 OpenMetadata。</p>
+      <p>确认采纳「{{ detail?.entity_id }}」的 AI 补全建议？将回写至 OpenMetadata。</p>
     </t-dialog>
   </t-dialog>
 </template>

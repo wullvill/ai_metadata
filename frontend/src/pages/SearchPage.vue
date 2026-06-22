@@ -300,13 +300,13 @@ const batchDisabled = computed(() => selectedRowKeys.value.length === 0)
 
 // ── Sort handler ──
 function handleSortChange(sort: TableProps['sort']) {
-  if (!sort || !sort.sortBy) {
+  // TDesign sort can be SortInfo or SortInfo[]
+  const s = !sort ? null : Array.isArray(sort) ? sort[0] : sort
+  if (!s || !s.sortBy) {
     sortState.sortBy = ''
     sortState.descending = false
     return
   }
-  // TDesign sort can be SortInfo or SortInfo[]
-  const s = Array.isArray(sort) ? sort[0] : sort
   sortState.sortBy = s.sortBy as string
   sortState.descending = s.descending
 }
