@@ -19,7 +19,7 @@ node_modules/
 dist/
 
 # Binaries
-*.pptx
+#*.pptx
 
 # OS
 .DS_Store
