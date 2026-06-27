@@ -2,7 +2,8 @@
 import json, re, sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.services.elasticsearch import ensure_columns_index, index_columns, COLUMNS_INDEX, get_es_client
+from app.services.search_index import ensure_columns_index, index_columns, COLUMNS_INDEX
+from app.services.elasticsearch import get_es_client
 
 HTML_PATH = os.path.join(os.path.dirname(__file__), "../../design-ui/asset_detail.html")
 

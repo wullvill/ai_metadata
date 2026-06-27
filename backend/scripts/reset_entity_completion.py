@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from elasticsearch import Elasticsearch
 
 from app.config import get_settings
-from app.services.elasticsearch import INDEX_NAME, COLUMNS_INDEX
+from app.services.search_index import INDEX_NAME, COLUMNS_INDEX
 
 settings = get_settings()
 
