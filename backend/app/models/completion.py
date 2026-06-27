@@ -22,6 +22,9 @@ class CompletionRecord(Base, TimestampMixin):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     synced_to_om: Mapped[bool] = mapped_column(Boolean, default=False)
     synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    parent_record_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True, default=None,
+    )
 
 
 class AuditLog(Base, TimestampMixin):
