@@ -1,4 +1,5 @@
 """向量存储 — 嵌入模式 ChromaDB / 生产模式 Milvus"""
+import threading
 from app.config import get_settings
 from app.utils.logger import get_logger
 
@@ -8,20 +9,23 @@ settings = get_settings()
 COLLECTION_NAME = "metadata_embeddings"
 
 _chroma_collection = None
+_chroma_lock = threading.Lock()
 
 
 def _get_chroma_collection():
     global _chroma_collection
     if _chroma_collection is None:
-        import chromadb
-        from pathlib import Path
+        with _chroma_lock:
+            if _chroma_collection is None:
+                import chromadb
+                from pathlib import Path
 
-        chroma_path = str(Path(__file__).resolve().parent.parent.parent / "data" / "chroma")
-        client = chromadb.PersistentClient(path=chroma_path)
-        _chroma_collection = client.get_or_create_collection(
-            name=COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"},
-        )
+                chroma_path = str(Path(__file__).resolve().parent.parent.parent / "data" / "chroma")
+                client = chromadb.PersistentClient(path=chroma_path)
+                _chroma_collection = client.get_or_create_collection(
+                    name=COLLECTION_NAME,
+                    metadata={"hnsw:space": "cosine"},
+                )
     return _chroma_collection
 
 
@@ -32,10 +36,16 @@ def search_similar(
     database: str | None = None,
 ) -> list[dict]:
     if settings.vector_store_backend == "chroma":
-        return _chroma_search_similar(embedding, entity_type, top_k, database)
+        results = _chroma_search_similar(embedding, entity_type, top_k, database)
     else:
         from app.services.milvus import search_similar as _milvus_search
-        return _milvus_search(embedding, entity_type, top_k, database)
+        results = _milvus_search(embedding, entity_type, top_k, database)
+    top3 = [(r['entity_id'], round(r.get('score', 0), 3)) for r in results[:3]]
+    logger.info(
+        f"Vector search: entity_type={entity_type}, database={database}, "
+        f"found={len(results)}, top3={top3}"
+    )
+    return results
 
 
 def _chroma_search_similar(
