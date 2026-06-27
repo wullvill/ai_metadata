@@ -217,7 +217,8 @@ def get_filter_options() -> dict[str, list[str]]:
     body = {
         "size": 0,
         "aggs": {
-            "systems": {"terms": {"field": "database", "size": 100}},
+            "systems": {"terms": {"field": "system.keyword", "size": 100}},
+            "databases": {"terms": {"field": "database", "size": 100}},
             "schemas": {"terms": {"field": "schema_name", "size": 100}},
             "db_types": {"terms": {"field": "db_type", "size": 20}},
         },
@@ -226,7 +227,7 @@ def get_filter_options() -> dict[str, list[str]]:
     aggs = resp["aggregations"]
     return {
         "systems": [b["key"] for b in aggs["systems"]["buckets"]],
-        "databases": [b["key"] for b in aggs["systems"]["buckets"]],
+        "databases": [b["key"] for b in aggs["databases"]["buckets"]],
         "schemas": [b["key"] for b in aggs["schemas"]["buckets"]],
         "db_types": [b["key"] for b in aggs["db_types"]["buckets"]],
     }

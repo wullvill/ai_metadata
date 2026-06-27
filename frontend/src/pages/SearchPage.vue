@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import AssetDetailDialog from '../components/AssetDetailDialog.vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import type { TableProps, SortInfo } from 'tdesign-vue-next'
 import { useSearch } from '../composables/useSearch'
@@ -35,7 +35,9 @@ const {
   clearResult,
 } = useCompletion()
 
-const router = useRouter()
+// ── Asset detail dialog ──
+const detailVisible = ref(false)
+const detailEntityId = ref('')
 
 // ── Local filter state (client-side) ──
 const localFilters = reactive({
@@ -216,10 +218,10 @@ function completionStatus(entity: AssetDisplay): string {
   return entity.completion_status || (entity.has_description ? 'completed' : 'pending')
 }
 
-// ── Navigation ──
+// ── Asset detail ──
 function openAssetDetail(entity: AssetDisplay) {
-  const route = router.resolve({ name: 'asset-detail', params: { id: entity.entity_id } })
-  window.open(route.href, '_blank')
+  detailEntityId.value = entity.entity_id
+  detailVisible.value = true
 }
 
 // ── Completion handlers ──
@@ -745,6 +747,12 @@ onMounted(async () => {
         将为「{{ assetName(pendingCompleteEntity) }}」申请补全，系统将根据资产所属系统智能补全信息。
       </p>
     </t-dialog>
+
+    <!-- Asset Detail Dialog -->
+    <AssetDetailDialog
+      v-model:visible="detailVisible"
+      :entity-id="detailEntityId"
+    />
   </div>
 </template>
 
