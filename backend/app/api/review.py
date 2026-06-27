@@ -1,5 +1,4 @@
 """审核 API"""
-import re
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -242,12 +241,10 @@ async def approve_review(
 
     cascade_count = 0
     if record.entity_type == "table":
-        escaped = re.sub(r"([%_])", r"\\\1", record.entity_id)
-        prefix = escaped + ".%"
         col_result = await db.execute(
             select(CompletionRecord).where(
                 CompletionRecord.entity_type == "column",
-                CompletionRecord.entity_id.like(prefix),
+                CompletionRecord.parent_record_id == record_id,
             )
         )
         for col in col_result.scalars().all():
