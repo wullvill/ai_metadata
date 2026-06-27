@@ -1,16 +1,17 @@
 """ES 回写异步任务"""
 from app.celery_app import celery_app
+from app.config import get_settings
 from app.database import SessionLocal
 from app.models.completion import CompletionRecord
 from app.services.search_index import reset_completion_status, update_completed_metadata, update_completed_columns
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
-@celery_app.task(name="es_sync_approval", bind=True, max_retries=3, default_retry_delay=60)
-def sync_approval_to_es(self, record_id: str):
-    """审批通过后异步回写 ES"""
+def do_sync_approval_to_es(record_id: str) -> dict:
+    """审批通过后同步回写搜索索引（可直接同步调用）"""
     db = SessionLocal()
     try:
         record = db.query(CompletionRecord).filter(
@@ -21,12 +22,10 @@ def sync_approval_to_es(self, record_id: str):
             logger.warning(f"sync_approval_to_es: record {record_id} not found or no result")
             return {"status": "skipped", "record_id": record_id}
 
-        # 回写表
         table_ok = update_completed_metadata(
             record.entity_id, record.completion_result
         )
 
-        # 回写字段
         if record.entity_type == "table":
             columns = db.query(CompletionRecord).filter(
                 CompletionRecord.entity_type == "column",
@@ -52,18 +51,31 @@ def sync_approval_to_es(self, record_id: str):
         return {"status": "done", "record_id": record_id, "table_ok": table_ok, "columns": col_count}
     except Exception as e:
         logger.error(f"sync_approval_to_es failed for {record_id}: {e}")
-        raise self.retry(exc=e)
+        raise
     finally:
         db.close()
 
 
+@celery_app.task(name="es_sync_approval", bind=True, max_retries=3, default_retry_delay=60)
+def sync_approval_to_es(self, record_id: str):
+    """审批通过后异步回写搜索索引（Celery 任务包装）"""
+    try:
+        return do_sync_approval_to_es(record_id)
+    except Exception as e:
+        raise self.retry(exc=e)
+
+
+def do_reset_asset_to_pending(entity_id: str) -> dict:
+    """审核拒绝后重置搜索索引资产状态为待补全（可直接同步调用）"""
+    ok = reset_completion_status(entity_id)
+    logger.info(f"Index reset done: {entity_id} ok={ok}")
+    return {"status": "done", "entity_id": entity_id, "ok": ok}
+
+
 @celery_app.task(name="es_reset_asset_pending", bind=True, max_retries=3, default_retry_delay=60)
 def reset_asset_to_pending(self, entity_id: str):
-    """审核拒绝后异步重置 ES 资产状态为待补全"""
+    """审核拒绝后异步重置搜索索引资产状态为待补全（Celery 任务包装）"""
     try:
-        ok = reset_completion_status(entity_id)
-        logger.info(f"ES reset done: {entity_id} ok={ok}")
-        return {"status": "done", "entity_id": entity_id, "ok": ok}
+        return do_reset_asset_to_pending(entity_id)
     except Exception as e:
-        logger.error(f"reset_asset_to_pending failed for {entity_id}: {e}")
         raise self.retry(exc=e)

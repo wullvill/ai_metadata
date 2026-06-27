@@ -9,7 +9,7 @@ export function useReview() {
   const error = ref<string | null>(null)
 
   const filters = reactive({
-    entity_type: '' as string,
+    entity_type: 'table' as string,
     status: 'pending_review' as string,
   })
 

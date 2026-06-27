@@ -6,10 +6,12 @@ from datetime import datetime, timezone
 from app.database import get_db
 from app.models.completion import CompletionRecord, AuditLog
 from app.api.schemas import ReviewActionRequest, BatchRejectRequest
-from app.jobs.es_sync import sync_approval_to_es, reset_asset_to_pending
+from app.config import get_settings
+from app.jobs.es_sync import sync_approval_to_es, reset_asset_to_pending, do_sync_approval_to_es, do_reset_asset_to_pending
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
+settings = get_settings()
 router = APIRouter(prefix="/api/v1/review", tags=["review"])
 
 
@@ -261,11 +263,14 @@ async def approve_review(
     db.add(log)
     await db.commit()
 
-    # 异步回写 ES（broker 不可达时静默失败，不影响审批结果）
+    # 回写搜索索引（嵌入式模式同步调用，生产模式通过 Celery 异步）
     try:
-        sync_approval_to_es.delay(record.id)
+        if settings.DEPLOYMENT_MODE == "embedded":
+            do_sync_approval_to_es(record.id)
+        else:
+            sync_approval_to_es.delay(record.id)
     except Exception as e:
-        logger.warning(f"Failed to dispatch ES sync task: {e}")
+        logger.warning(f"Failed to sync index for approved record {record_id}: {e}")
 
     logger.info(f"Review approved: {record_id} -> {record.entity_id}, cascade={cascade_count}")
     return {"success": True, "data": {"status": "approved", "cascade_columns": cascade_count}}
@@ -334,9 +339,12 @@ async def reject_review(
 
     # 异步重置 ES 资产状态为待补全
     try:
-        reset_asset_to_pending.delay(record.entity_id)
+        if settings.DEPLOYMENT_MODE == "embedded":
+            do_reset_asset_to_pending(record.entity_id)
+        else:
+            reset_asset_to_pending.delay(record.entity_id)
     except Exception as e:
-        logger.warning(f"Failed to dispatch ES reset task: {e}")
+        logger.warning(f"Failed to reset index for rejected record {record_id}: {e}")
 
     logger.info(f"Review rejected: {record_id} -> {record.entity_id}")
     return {"success": True, "data": {"status": "rejected"}}
@@ -386,9 +394,12 @@ async def batch_reject(req: BatchRejectRequest, db: AsyncSession = Depends(get_d
         record = result.scalar_one_or_none()
         if record:
             try:
-                reset_asset_to_pending.delay(record.entity_id)
+                if settings.DEPLOYMENT_MODE == "embedded":
+                    do_reset_asset_to_pending(record.entity_id)
+                else:
+                    reset_asset_to_pending.delay(record.entity_id)
             except Exception as e:
-                logger.warning(f"Failed to dispatch ES reset task for {rid}: {e}")
+                logger.warning(f"Failed to reset index for batch-rejected record {rid}: {e}")
 
     logger.info(f"Batch rejected: {count} records")
     return {"success": True, "data": {"count": count}}

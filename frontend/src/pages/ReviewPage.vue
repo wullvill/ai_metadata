@@ -55,11 +55,6 @@ const typeChips = [
 const filteredRecords = computed(() => {
   let list = records.value
 
-  // Default: exclude column (字段) records unless explicitly filtering for them
-  if (filters.entity_type !== 'column') {
-    list = list.filter(r => r.entity_type !== 'column')
-  }
-
   // Search filter: entity_id, display_name, description, tags
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim()

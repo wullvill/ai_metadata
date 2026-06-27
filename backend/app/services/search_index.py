@@ -126,7 +126,7 @@ def _doc_to_dict(doc) -> dict:
     return doc.to_dict() if hasattr(doc, "to_dict") else (dict(doc) if hasattr(doc, "__iter__") and not isinstance(doc, (str, bytes)) else {})
 
 
-def _scan_all_docs(index, searcher, limit: int = 5000):
+def _scan_all_docs(index, searcher, limit: int = 100000):
     """Scan all documents in the index using all_query (reliable cross-version)."""
     import tantivy
     all_q = tantivy.Query.all_query()
@@ -711,37 +711,101 @@ def _tantivy_update_completed(entity_id: str, completion_result: dict) -> bool:
     index = _get_tantivy_index()
     index.reload()
     searcher = index.searcher()
-    writer = index.writer(50_000_000, 1)
     now = datetime.now(timezone.utc).isoformat()
+
     updated = False
+    all_docs: list[dict] = []
     for doc_dict in _scan_all_docs(index, searcher):
         eid = _field_first(doc_dict, "entity_id")
+        if eid == entity_id:
+            # Replace with updated version
+            new_doc = dict(doc_dict)
+            new_doc["display_name"] = str(completion_result.get("display_name", ""))
+            new_doc["description"] = str(completion_result.get("description", ""))
+            new_doc["tags"] = json.dumps(completion_result.get("tags", []), ensure_ascii=False)
+            new_doc["has_description"] = "true"
+            new_doc["completion_status"] = "completed"
+            new_doc["completion_time"] = now
+            new_doc["updated_time"] = now
+            all_docs.append(new_doc)
+            updated = True
+        else:
+            all_docs.append(doc_dict)
+
+    if not updated:
+        return False
+
+    writer = index.writer(50_000_000, 1)
+    writer.delete_all_documents()
+    for doc_dict in all_docs:
         td = tantivy.Document()
         for key, value in doc_dict.items():
             if isinstance(value, list):
                 value = str(value[0]) if value else ""
             else:
                 value = str(value) if value is not None else ""
-            if eid == entity_id:
-                if key == "display_name":
-                    value = completion_result.get("display_name", "")
-                elif key == "description":
-                    value = completion_result.get("description", "")
-                elif key == "tags":
-                    value = json.dumps(completion_result.get("tags", []), ensure_ascii=False)
-                elif key == "has_description":
-                    value = "true"
-                elif key == "completion_status":
-                    value = "completed"
-                elif key == "completion_time":
-                    value = now
-                elif key == "updated_time":
-                    value = now
-                updated = True
+            try:
+                td.add_text(key, value)
+            except Exception:
+                pass
+        try:
+            writer.add_document(td)
+        except Exception:
+            pass
+    writer.commit()
+    return True
+
+
+def set_processing_status(entity_id: str) -> bool:
+    """将资产状态设置为处理中"""
+    if settings.search_index_backend == "tantivy":
+        return _tantivy_set_status(entity_id, "processing")
+    else:
+        from app.services.elasticsearch import get_es_client, INDEX_NAME
+        es = get_es_client()
+        es.update(index=INDEX_NAME, id=entity_id, doc={
+            "completion_status": "processing",
+            "updated_time": datetime.now(timezone.utc).isoformat(),
+        })
+        return True
+
+
+def _tantivy_set_status(entity_id: str, status: str) -> bool:
+    import tantivy
+    index = _get_tantivy_index()
+    index.reload()
+    searcher = index.searcher()
+    now = datetime.now(timezone.utc).isoformat()
+
+    updated = False
+    all_docs: list[dict] = []
+    for doc_dict in _scan_all_docs(index, searcher):
+        eid = _field_first(doc_dict, "entity_id")
+        if eid == entity_id:
+            new_doc = dict(doc_dict)
+            new_doc["completion_status"] = status
+            new_doc["updated_time"] = now
+            all_docs.append(new_doc)
+            updated = True
+        else:
+            all_docs.append(doc_dict)
+
+    if not updated:
+        return False
+
+    writer = index.writer(50_000_000, 1)
+    writer.delete_all_documents()
+    for doc_dict in all_docs:
+        td = tantivy.Document()
+        for key, value in doc_dict.items():
+            if isinstance(value, list):
+                value = str(value[0]) if value else ""
+            else:
+                value = str(value) if value is not None else ""
             td.add_text(key, value)
         writer.add_document(td)
     writer.commit()
-    return updated
+    return True
 
 
 def reset_completion_status(entity_id: str) -> bool:
@@ -757,27 +821,37 @@ def _tantivy_reset_status(entity_id: str) -> bool:
     index = _get_tantivy_index()
     index.reload()
     searcher = index.searcher()
-    writer = index.writer(50_000_000, 1)
     now = datetime.now(timezone.utc).isoformat()
+
     updated = False
+    all_docs: list[dict] = []
     for doc_dict in _scan_all_docs(index, searcher):
         eid = _field_first(doc_dict, "entity_id")
+        if eid == entity_id:
+            new_doc = dict(doc_dict)
+            new_doc["completion_status"] = "pending"
+            new_doc["updated_time"] = now
+            all_docs.append(new_doc)
+            updated = True
+        else:
+            all_docs.append(doc_dict)
+
+    if not updated:
+        return False
+
+    writer = index.writer(50_000_000, 1)
+    writer.delete_all_documents()
+    for doc_dict in all_docs:
         td = tantivy.Document()
         for key, value in doc_dict.items():
             if isinstance(value, list):
                 value = str(value[0]) if value else ""
             else:
                 value = str(value) if value is not None else ""
-            if eid == entity_id:
-                if key == "completion_status":
-                    value = "pending"
-                elif key == "updated_time":
-                    value = now
-                updated = True
             td.add_text(key, value)
         writer.add_document(td)
     writer.commit()
-    return updated
+    return True
 
 
 def update_completed_columns(entity_id: str, columns_data: list[dict]) -> int:
@@ -798,20 +872,22 @@ def _tantivy_update_columns(entity_id: str, columns_data: list[dict]) -> int:
     now = datetime.now(timezone.utc).isoformat()
     target_ids = {f"{entity_id}.{col['name']}" for col in columns_data}
 
-    # 收集全部文档，更新匹配列后整体重写（Tantivy 不支持原地更新）
+    # Collect ALL documents, replace matching ones with updated versions
     all_docs: list[dict] = []
     count = 0
-    for doc_dict in _scan_all_docs(index, searcher, limit=20000):
+    for doc_dict in _scan_all_docs(index, searcher, limit=100000):
         col_id = _field_first(doc_dict, "column_id")
-        new_doc = dict(doc_dict)
         if col_id in target_ids:
             matching = next((c for c in columns_data if f"{entity_id}.{c['name']}" == col_id), None)
             if matching:
+                new_doc = dict(doc_dict)
                 new_doc["completion_description"] = matching.get("description", "")
                 new_doc["completion_tags"] = json.dumps(matching.get("tags", []), ensure_ascii=False)
                 new_doc["completion_time"] = now
+                all_docs.append(new_doc)
                 count += 1
-        all_docs.append(new_doc)
+                continue
+        all_docs.append(doc_dict)
 
     if count == 0:
         return 0

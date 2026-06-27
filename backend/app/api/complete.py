@@ -8,7 +8,6 @@ from app.api.schemas import CompletionTriggerRequest, CompletionResponse
 from datetime import datetime, timezone
 
 from app.utils.logger import get_logger
-from app.services.elasticsearch import get_es_client, INDEX_NAME
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/complete", tags=["complete"])
@@ -95,23 +94,20 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
     await db.commit()
     await db.refresh(record)
 
-    # 同步标记 ES 为处理中
+    # 同步标记搜索索引为处理中
     try:
-        es = get_es_client()
-        es.update(index=INDEX_NAME, id=target["entity_id"], doc={
-            "completion_status": "processing",
-            "updated_time": datetime.now(timezone.utc).isoformat(),
-        })
+        from app.services.search_index import set_processing_status
+        set_processing_status(target["entity_id"])
     except Exception:
         pass
 
-    # 自动采纳：同步回写 Tantivy（嵌入式模式无 Celery worker）
+    # 自动采纳：同步回写搜索索引
     if record.review_status == "auto_approved":
         try:
-            from app.jobs.es_sync import sync_approval_to_es
-            sync_approval_to_es(record.id)
+            from app.jobs.es_sync import do_sync_approval_to_es
+            do_sync_approval_to_es(record.id)
         except Exception as e:
-            logger.warning(f"Failed to sync ES for auto_approved {record.id}: {e}")
+            logger.warning(f"Failed to sync index for auto_approved {record.id}: {e}")
 
     return CompletionResponse(
         record_id=record.id,
