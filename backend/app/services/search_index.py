@@ -23,7 +23,13 @@ def _ensure_data_dir() -> Path:
 
 
 def _register_cjk_tokenizer(index: "tantivy.Index") -> None:
-    """Register a CJK-appropriate ngram tokenizer under the 'jieba' name on the index."""
+    """Register a CJK-appropriate ngram tokenizer under the 'jieba' name on the index.
+
+    This uses an ngram(1,3) tokenizer as an approximation of jieba segmentation
+    for Chinese text. The tantivy 0.22 API supports index.register_tokenizer()
+    but does not provide a native jieba implementation, so ngram is the closest
+    available alternative for CJK character-level indexing.
+    """
     import tantivy
     try:
         tokenizer = tantivy.Tokenizer.ngram(1, 3, False)
@@ -118,15 +124,6 @@ def _doc_to_dict(doc) -> dict:
     if doc is None:
         return {}
     return doc.to_dict() if hasattr(doc, "to_dict") else (dict(doc) if hasattr(doc, "__iter__") and not isinstance(doc, (str, bytes)) else {})
-
-
-def _searcher_doc_at(searcher, idx: int, segment_ord: int = 0):
-    """Retrieve a document by its index within a segment."""
-    import tantivy
-    try:
-        return searcher.doc(tantivy.DocAddress(segment_ord, idx))
-    except Exception:
-        return None
 
 
 def _scan_all_docs(index, searcher, limit: int = 5000):
@@ -413,13 +410,14 @@ def _tantivy_search_all(
             return val or ""
         return (val or "").lower()
 
-    results.sort(key=_sort_key, reverse=reverse)
-
-    # Default multi-level sort tiebreakers: system then name
-    if sort_by != "system":
-        results.sort(key=lambda x: (x.get("system") or "").lower())
+    # Apply tiebreakers first (stable sort), then primary sort last.
+    # Tiebreaker sorts must run BEFORE the primary sort so they only affect
+    # items with equal primary sort keys (Python's sort is stable).
     if sort_by != "name":
         results.sort(key=lambda x: (x.get("table_name") or "").lower())
+    if sort_by != "system":
+        results.sort(key=lambda x: (x.get("system") or "").lower())
+    results.sort(key=_sort_key, reverse=reverse)
 
     return results[:top_k]
 
@@ -832,12 +830,13 @@ def _tantivy_search_reference(search_text: str, exclude_entity_id: str) -> list[
     hits = searcher.search(query, 40)
     raw_hits = hits.hits if hasattr(hits, "hits") else hits
     results = []
-    for hit in raw_hits:
+    for idx, hit in enumerate(raw_hits):
         doc = _hit_to_dict(hit, searcher)
         eid = _field_first(doc, "entity_id")
         if eid == exclude_entity_id:
             continue
         results.append({
+            "_score": 20.0 - idx,
             "_source": {
                 "entity_id": eid,
                 "completion_description": _field_first(doc, "completion_description"),
