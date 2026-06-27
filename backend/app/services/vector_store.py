@@ -7,19 +7,24 @@ settings = get_settings()
 
 COLLECTION_NAME = "metadata_embeddings"
 
+_chroma_collection = None
+
 
 def _get_chroma_collection():
-    import chromadb
-    from chromadb.config import Settings as ChromaSettings
+    global _chroma_collection
+    if _chroma_collection is None:
+        import chromadb
+        from chromadb.config import Settings as ChromaSettings
 
-    client = chromadb.PersistentClient(
-        path="data/chroma",
-        settings=ChromaSettings(anonymized_telemetry=False),
-    )
-    return client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},
-    )
+        client = chromadb.PersistentClient(
+            path="data/chroma",
+            settings=ChromaSettings(anonymized_telemetry=False),
+        )
+        _chroma_collection = client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"},
+        )
+    return _chroma_collection
 
 
 def search_similar(
