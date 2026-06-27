@@ -608,19 +608,32 @@ def _tantivy_set_sample(entity_ids: list[str], is_sample: bool) -> int:
     index = _get_tantivy_index()
     index.reload()
     searcher = index.searcher()
-    writer = index.writer(50_000_000, 1)
+    target_set = set(entity_ids)
+
+    # Collect ALL docs into memory, update is_sample for targets
+    all_docs: list[dict] = []
     count = 0
     for doc_dict in _scan_all_docs(index, searcher):
         eid = _field_first(doc_dict, "entity_id")
+        new_doc = dict(doc_dict)
+        if eid in target_set:
+            new_doc["is_sample"] = ["true"] if is_sample else ["false"]
+            count += 1
+        all_docs.append(new_doc)
+
+    if not all_docs or count == 0:
+        return 0
+
+    # Delete all and rewrite (Tantivy doesn't support in-place update on text fields)
+    writer = index.writer(50_000_000, 1)
+    writer.delete_all_documents()
+    for doc_dict in all_docs:
         td = tantivy.Document()
         for key, value in doc_dict.items():
             if isinstance(value, list):
                 value = str(value[0]) if value else ""
             else:
                 value = str(value) if value is not None else ""
-            if key == "is_sample" and eid in entity_ids:
-                value = "true" if is_sample else "false"
-                count += 1
             td.add_text(key, value)
         writer.add_document(td)
     writer.commit()
