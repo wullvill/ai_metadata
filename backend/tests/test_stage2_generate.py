@@ -28,7 +28,7 @@ class TestParseLLMJson:
 class TestSelectModel:
     def test_column_defaults_to_qwen_plus(self):
         model = select_model("column", [], [])
-        assert model == "qwen3.7-plus"
+        assert model == "qwen-plus"
 
     def test_table_with_rich_siblings_uses_qwen_max(self):
         siblings = [{"description": "description_" + str(i)} for i in range(6)]
@@ -38,7 +38,7 @@ class TestSelectModel:
     def test_table_sparse_siblings_uses_default(self):
         siblings = [{"description": ""} for _ in range(6)]
         model = select_model("table", siblings, [])
-        assert model == "qwen3.7-plus"
+        assert model == "qwen-plus"
 
 
 class TestBuildTablePrompt:

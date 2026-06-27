@@ -4,7 +4,7 @@
     header="资产详情"
     attach="body"
     :z-index="2600"
-    width="800px"
+    width="900px"
     :footer="false"
     @close="emit('update:visible', false)"
   >
@@ -56,7 +56,7 @@
             <t-tab-panel value="columns" label="列信息">
               <div v-if="columns.length > 0">
                 <p class="section-title">列信息 ({{ columns.length }} 列)</p>
-                <t-table :data="columns" :columns="columnTableDefs" row-key="column_id" bordered stripe size="small">
+                <t-table :data="columns" :columns="columnTableDefs" row-key="column_id" bordered stripe size="small" table-layout="fixed">
                   <template #original_tags="{ row }">
                     <t-tag v-for="tag in row.original_tags" :key="tag" variant="light" theme="default" size="small" style="margin-right:2px">{{ tag }}</t-tag>
                     <span v-if="!row.original_tags?.length">—</span>
@@ -66,8 +66,7 @@
                     <span v-if="!row.completion_tags?.length">—</span>
                   </template>
                   <template #completion_time="{ row }">
-                    <span v-if="row.completion_time">{{ row.completion_time }}</span>
-                    <span v-else>—</span>
+                    <span class="cell-mono">{{ formatTime(row.completion_time) }}</span>
                   </template>
                 </t-table>
               </div>
@@ -110,14 +109,20 @@ const entityTypeLabel = computed(() => {
 const statusLabel = computed(() => asset.value?.has_description ? '已补全' : '待补全')
 const statusTheme = computed(() => asset.value?.has_description ? 'success' : 'warning')
 
+function formatTime(iso: string | undefined | null): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
+}
+
 const columnTableDefs = [
-  { colKey: 'column_name', title: '列名', width: 180 },
-  { colKey: 'data_type', title: '数据类型', width: 130 },
-  { colKey: 'original_description', title: '原始描述', ellipsis: true, width: 160 },
-  { colKey: 'original_tags', title: '原始标签', width: 120 },
-  { colKey: 'completion_description', title: '补全描述', ellipsis: true, width: 180 },
-  { colKey: 'completion_tags', title: '补全标签', width: 120 },
-  { colKey: 'completion_time', title: '补全时间', width: 150 },
+  { colKey: 'column_name', title: '列名', width: 150, ellipsis: true },
+  { colKey: 'data_type', title: '数据类型', width: 90, ellipsis: true },
+  { colKey: 'original_description', title: '原始描述', ellipsis: true, width: 140 },
+  { colKey: 'original_tags', title: '原始标签', width: 100 },
+  { colKey: 'completion_description', title: '补全描述', ellipsis: true, width: 160 },
+  { colKey: 'completion_tags', title: '补全标签', width: 100 },
+  { colKey: 'completion_time', title: '补全时间', width: 140 },
 ]
 
 async function loadDetail(id: string) {
@@ -232,5 +237,21 @@ watch(() => props.visible, (v) => {
 .error-state h2 {
   font-size: 18px;
   margin: 8px 0 0;
+}
+
+.cell-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+/* Compact column table */
+:deep(.t-table__body td) {
+  padding: 5px 8px !important;
+  font-size: 12px;
+}
+
+:deep(.t-table__header th) {
+  padding: 6px 8px !important;
+  font-size: 11px;
 }
 </style>

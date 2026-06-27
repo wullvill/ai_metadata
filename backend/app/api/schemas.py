@@ -72,7 +72,7 @@ class PipelineConfigSchema(BaseModel):
         "pending_review": 0.60,
     })
     models: dict = Field(default_factory=lambda: {
-        "default": "qwen3.7-plus",
+        "default": "qwen-plus",
         "auto_select": True,
         "table_rich_threshold": 5,
     })

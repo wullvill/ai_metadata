@@ -170,8 +170,9 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
         merged = [{**item, "source": "milvus"} for item in milvus_results[:15]]
         logger.info("Stage 1 fallback: Milvus-only retrieval (ES unavailable)")
     else:
-        merged = [{**item, "source": "es"} for item in es_results[:15]]
-        logger.info("Stage 1 fallback: ES-only retrieval (Milvus unavailable)")
+        # ES-only 时仍保留样本置顶结果（已加入 milvus_results），确保 LLM 有参考上下文
+        merged = milvus_results[:5] + [{**item, "source": "es"} for item in es_results[:10]]
+        logger.info(f"Stage 1 fallback: ES-only ({len(merged)} merged, Milvus unavailable)")
 
     # 字段级补全：额外获取同表兄弟字段
     sibling_columns: list[dict] = []

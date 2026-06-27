@@ -43,6 +43,7 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
         review_status=result.get("review_status") or "rejected",
     )
     db.add(record)
+    await db.flush()  # 确保 record.id 已生成（gen_uuid 默认值在 flush 时执行）
 
     # 表级补全：级联补全所有字段
     if target["entity_type"] == "table":
@@ -104,13 +105,13 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
     except Exception:
         pass
 
-    # 自动采纳：异步回写 ES（与人工审批逻辑一致）
+    # 自动采纳：同步回写 Tantivy（嵌入式模式无 Celery worker）
     if record.review_status == "auto_approved":
         try:
             from app.jobs.es_sync import sync_approval_to_es
-            sync_approval_to_es.delay(record.id)
+            sync_approval_to_es(record.id)
         except Exception as e:
-            logger.warning(f"Failed to dispatch ES sync for auto_approved {record.id}: {e}")
+            logger.warning(f"Failed to sync ES for auto_approved {record.id}: {e}")
 
     return CompletionResponse(
         record_id=record.id,

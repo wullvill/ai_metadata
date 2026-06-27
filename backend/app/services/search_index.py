@@ -145,18 +145,35 @@ def _field_first(doc: dict, key: str, default: str = "") -> str:
     return str(val) if val is not None else default
 
 
+def _bool_field(doc: dict, key: str, default: bool = False) -> bool:
+    """Read a boolean field stored as 'true'/'false' string in Tantivy."""
+    val = doc.get(key, None)
+    if val is None:
+        return default
+    if isinstance(val, list):
+        val = str(val[0]) if val else ""
+    return str(val).lower() in ("true", "1")
+
+
 def _parse_tags(val) -> list[str]:
     if val is None:
         return []
     if isinstance(val, list):
         if len(val) > 0 and isinstance(val[0], str):
-            return val
+            # Tantivy returns text fields as single-element lists; try JSON parse first
+            try:
+                parsed = json.loads(val[0])
+                if isinstance(parsed, list):
+                    return [str(v) for v in parsed]
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return [str(v) for v in val]
         return [str(v) for v in val[:1]]
     s = str(val)
     try:
         parsed = json.loads(s)
         if isinstance(parsed, list):
-            return parsed
+            return [str(v) for v in parsed]
     except (json.JSONDecodeError, TypeError):
         pass
     return [s] if s else []
@@ -379,11 +396,11 @@ def _tantivy_search_all(
             "data_type": _field_first(doc, "data_type"),
             "db_type": _field_first(doc, "db_type"),
             "tags": _parse_tags(doc.get("tags")),
-            "has_description": _field_first(doc, "has_description"),
+            "has_description": _bool_field(doc, "has_description"),
             "completion_status": _field_first(doc, "completion_status"),
             "completion_time": _field_first(doc, "completion_time"),
             "updated_time": _field_first(doc, "updated_time"),
-            "is_sample": _field_first(doc, "is_sample"),
+            "is_sample": _bool_field(doc, "is_sample"),
             "system": _field_first(doc, "system"),
             "score": float(score),
             "highlight": {},
@@ -522,11 +539,11 @@ def _tantivy_get_by_id(entity_id: str) -> dict | None:
                 "data_type": _field_first(doc, "data_type"),
                 "db_type": _field_first(doc, "db_type"),
                 "tags": _parse_tags(doc.get("tags")),
-                "has_description": _field_first(doc, "has_description"),
+                "has_description": _bool_field(doc, "has_description"),
                 "completion_status": _field_first(doc, "completion_status"),
                 "completion_time": _field_first(doc, "completion_time"),
                 "updated_time": _field_first(doc, "updated_time"),
-                "is_sample": _field_first(doc, "is_sample"),
+                "is_sample": _bool_field(doc, "is_sample"),
                 "system": _field_first(doc, "system"),
             }
     return None
@@ -553,9 +570,9 @@ def _tantivy_get_columns(entity_id: str, size: int = 500) -> list[dict]:
                 "column_name": _field_first(doc, "column_name"),
                 "data_type": _field_first(doc, "data_type"),
                 "original_description": _field_first(doc, "original_description"),
-                "original_tags": _field_first(doc, "original_tags"),
+                "original_tags": _parse_tags(doc.get("original_tags")),
                 "completion_description": _field_first(doc, "completion_description"),
-                "completion_tags": _field_first(doc, "completion_tags"),
+                "completion_tags": _parse_tags(doc.get("completion_tags")),
                 "completion_time": _field_first(doc, "completion_time"),
             })
             if len(results) >= size:
@@ -669,11 +686,11 @@ def _tantivy_get_samples() -> list[dict]:
             "data_type": _field_first(doc, "data_type"),
             "db_type": _field_first(doc, "db_type"),
             "tags": _parse_tags(doc.get("tags")),
-            "has_description": _field_first(doc, "has_description"),
+            "has_description": _bool_field(doc, "has_description"),
             "completion_status": _field_first(doc, "completion_status"),
             "completion_time": _field_first(doc, "completion_time"),
             "updated_time": _field_first(doc, "updated_time"),
-            "is_sample": _field_first(doc, "is_sample"),
+            "is_sample": _bool_field(doc, "is_sample"),
             "system": _field_first(doc, "system"),
         })
         if len(results) >= 1000:
@@ -778,30 +795,44 @@ def _tantivy_update_columns(entity_id: str, columns_data: list[dict]) -> int:
     index = _get_tantivy_columns_index()
     index.reload()
     searcher = index.searcher()
-    writer = index.writer(50_000_000, 1)
     now = datetime.now(timezone.utc).isoformat()
     target_ids = {f"{entity_id}.{col['name']}" for col in columns_data}
+
+    # 收集全部文档，更新匹配列后整体重写（Tantivy 不支持原地更新）
+    all_docs: list[dict] = []
     count = 0
-    for doc_dict in _scan_all_docs(index, searcher):
+    for doc_dict in _scan_all_docs(index, searcher, limit=20000):
         col_id = _field_first(doc_dict, "column_id")
+        new_doc = dict(doc_dict)
+        if col_id in target_ids:
+            matching = next((c for c in columns_data if f"{entity_id}.{c['name']}" == col_id), None)
+            if matching:
+                new_doc["completion_description"] = matching.get("description", "")
+                new_doc["completion_tags"] = json.dumps(matching.get("tags", []), ensure_ascii=False)
+                new_doc["completion_time"] = now
+                count += 1
+        all_docs.append(new_doc)
+
+    if count == 0:
+        return 0
+
+    writer = index.writer(50_000_000, 1)
+    writer.delete_all_documents()
+    for doc_dict in all_docs:
         td = tantivy.Document()
         for key, value in doc_dict.items():
             if isinstance(value, list):
                 value = str(value[0]) if value else ""
             else:
                 value = str(value) if value is not None else ""
-            if col_id in target_ids:
-                matching = next((c for c in columns_data if f"{entity_id}.{c['name']}" == col_id), None)
-                if matching:
-                    if key == "completion_description":
-                        value = matching.get("description", "")
-                    elif key == "completion_tags":
-                        value = json.dumps(matching.get("tags", []), ensure_ascii=False)
-                    elif key == "completion_time":
-                        value = now
-                    count += 1
-            td.add_text(key, value)
-        writer.add_document(td)
+            try:
+                td.add_text(key, value)
+            except Exception:
+                pass
+        try:
+            writer.add_document(td)
+        except Exception:
+            pass
     writer.commit()
     return count
 

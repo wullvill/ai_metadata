@@ -28,10 +28,9 @@ def sync_approval_to_es(self, record_id: str):
 
         # 回写字段
         if record.entity_type == "table":
-            prefix = record.entity_id + ".%"
             columns = db.query(CompletionRecord).filter(
                 CompletionRecord.entity_type == "column",
-                CompletionRecord.entity_id.like(prefix),
+                CompletionRecord.parent_record_id == record_id,
             ).all()
 
             columns_data = [

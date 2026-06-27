@@ -16,7 +16,7 @@ class TestConfigService:
         config = svc.get_defaults()
         assert config["thresholds"]["auto_approve"] == 0.80
         assert config["thresholds"]["pending_review"] == 0.60
-        assert config["models"]["default"] == "qwen3.7-plus"
+        assert config["models"]["default"] == "qwen-plus"
         assert config["retrieval"]["milvus_top_k"] == 20
         assert config["retrieval"]["rrf_k"] == 60
         assert config["retrieval"]["rrf_top_n"] == 15
@@ -35,7 +35,7 @@ class TestConfigService:
         updated = svc.apply_partial(partial)
         assert updated["thresholds"]["auto_approve"] == 0.90
         assert updated["thresholds"]["pending_review"] == 0.60  # unchanged
-        assert updated["models"]["default"] == "qwen3.7-plus"      # unchanged
+        assert updated["models"]["default"] == "qwen-plus"      # unchanged
 
     def test_partial_update_keeps_unrelated_sections(self):
         svc = ConfigService()

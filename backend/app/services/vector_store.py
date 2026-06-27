@@ -14,12 +14,10 @@ def _get_chroma_collection():
     global _chroma_collection
     if _chroma_collection is None:
         import chromadb
-        from chromadb.config import Settings as ChromaSettings
+        from pathlib import Path
 
-        client = chromadb.PersistentClient(
-            path="data/chroma",
-            settings=ChromaSettings(anonymized_telemetry=False),
-        )
+        chroma_path = str(Path(__file__).resolve().parent.parent.parent / "data" / "chroma")
+        client = chromadb.PersistentClient(path=chroma_path)
         _chroma_collection = client.get_or_create_collection(
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
@@ -47,9 +45,13 @@ def _chroma_search_similar(
     database: str | None = None,
 ) -> list[dict]:
     collection = _get_chroma_collection()
-    where = {"entity_type": entity_type, "has_description": True}
+    conditions = [
+        {"entity_type": {"$eq": entity_type}},
+        {"has_description": {"$eq": True}},
+    ]
     if database:
-        where["database"] = database
+        conditions.append({"database": {"$eq": database}})
+    where: dict = {"$and": conditions} if len(conditions) > 1 else conditions[0]
 
     results = collection.query(
         query_embeddings=[embedding],

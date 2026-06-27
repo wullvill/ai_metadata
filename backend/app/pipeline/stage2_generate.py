@@ -17,7 +17,7 @@ def select_model(entity_type: str, schema_context: list[dict], retrieved_context
     models_cfg = cfg["models"]
 
     if not models_cfg.get("auto_select", True):
-        return models_cfg.get("default", "qwen3.7-plus")
+        return models_cfg.get("default", "qwen-plus")
 
     if entity_type == "table":
         rich_desc_count = sum(
@@ -27,7 +27,7 @@ def select_model(entity_type: str, schema_context: list[dict], retrieved_context
         threshold = models_cfg.get("table_rich_threshold", 5)
         if rich_desc_count > threshold:
             return "qwen-max"
-    return models_cfg.get("default", "qwen3.7-plus")
+    return models_cfg.get("default", "qwen-plus")
 
 
 def parse_llm_json(raw_response: str) -> dict:
