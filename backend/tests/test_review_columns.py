@@ -35,18 +35,25 @@ async def seeded_records():
         target_data={"database": "test_db", "schema": "test_schema", "table_name": "test_table_for_columns"},
         review_status="pending_review",
     )
+
+    # 先 commit table 记录以获取其 id，再创建关联的 column 记录
+    async with async_session() as session:
+        session.add(table_record)
+        await session.commit()
+        table_id = table_record.id
+
     column_record = CompletionRecord(
         entity_id=column_entity_id,
         entity_type="column",
         target_data={"column_name": "test_column"},
         completion_result={"display_name": "测试字段", "confidence": 0.85},
         review_status="pending_review",
+        parent_record_id=table_id,
     )
 
     async with async_session() as session:
-        session.add_all([table_record, column_record])
+        session.add(column_record)
         await session.commit()
-        table_id = table_record.id
         column_id = column_record.id
 
     yield table_id, column_id, table_entity_id

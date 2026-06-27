@@ -93,12 +93,11 @@ async def get_record_columns(record_id: str, db: AsyncSession = Depends(get_db))
     if record.entity_type != "table":
         return {"success": True, "data": []}
 
-    prefix = record.entity_id + ".%"
     result = await db.execute(
         select(CompletionRecord)
         .where(
             CompletionRecord.entity_type == "column",
-            CompletionRecord.entity_id.like(prefix),
+            CompletionRecord.parent_record_id == record_id,
         )
         .order_by(CompletionRecord.entity_id)
     )
