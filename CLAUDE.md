@@ -16,10 +16,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 编排框架 | LangGraph | ≥ 0.2 |
 | LLM 框架 | LangChain | ≥ 0.3 |
 | 模型服务 | 阿里云百炼 (DashScope) | ≥ 1.20 |
-| 向量库 | Milvus | ≥ 2.4 |
-| 搜索引擎 | Elasticsearch | 8.x |
-| 数据库 | SQLite (dev) / PostgreSQL (prod) | - |
-| 异步任务 | Celery + Redis | ≥ 5.4 |
+| 向量库 | ChromaDB (embedded) / Milvus (production) | ≥ 0.5 / ≥ 2.4 |
+| 搜索引擎 | Tantivy + jieba (embedded) / Elasticsearch (production) | ≥ 0.22 |
+| 数据库 | SQLite (embedded) / PostgreSQL (production) | - |
+| 异步任务 | Celery + SQLite broker (embedded) / Celery + Redis (production) | ≥ 5.4 |
 | 前端框架 | Vue 3 + TDesign | ≥ 3.5 |
 | 前端构建 | Vite | ≥ 6.0 |
 
@@ -30,7 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cd backend
 source .venv/bin/activate
 uvicorn app.main:app --reload --port 8000    # 启动 API 服务
-celery -A app.celery_app worker -P gevent    # 启动 Celery Worker
+celery -A app.celery_app worker -P solo      # 启动 Celery Worker (embedded)
 pytest tests/ -v --cov=app --cov-report=term # 运行测试
 
 # 前端
@@ -45,8 +45,8 @@ npm run build    # 生产构建
 
 ```
 用户触发 → [Stage 1: 双路检索] → [Stage 2: LLM 生成] → [Stage 3: 质量校验] → [Stage 4: 审核路由]
-              Milvus + ES          百炼平台              置信度修正 + 规则        审核工作台 +
-              RRF 融合           qwen/deepseek           引擎 + 冲突检测        OpenMetadata 回写
+          ChromaDB/Tantivy +     百炼平台              置信度修正 + 规则        审核工作台 +
+          Milvus/ES RRF 融合   qwen/deepseek           引擎 + 冲突检测        OpenMetadata 回写
 ```
 
 项目结构：
@@ -55,7 +55,7 @@ npm run build    # 生产构建
 backend/app/
 ├── api/          # REST API 层 (search, complete, review)
 ├── pipeline/     # LangGraph 四阶段 Pipeline
-├── services/     # 外部服务封装 (Milvus, ES, OM, DashScope)
+├── services/     # 服务封装 (vector_store, search_index, OM, DashScope)
 ├── models/       # ORM 数据模型
 ├── jobs/         # Celery 异步任务
 └── utils/        # 工具函数
