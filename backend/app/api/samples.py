@@ -1,6 +1,6 @@
 """补全样本管理 API"""
 from fastapi import APIRouter
-from app.services.elasticsearch import set_sample_flag, get_samples
+from app.services.search_index import set_sample_flag, get_samples
 from app.api.schemas import SampleSetRequest
 
 router = APIRouter(prefix="/api/v1/samples", tags=["samples"])

@@ -162,28 +162,12 @@ async def get_review_references(record_id: str, db: AsyncSession = Depends(get_d
     if not search_text:
         return {"success": True, "data": []}
 
-    from app.services.elasticsearch import get_es_client
+    from app.services.search_index import search_reference
     try:
-        es = get_es_client()
-        body = {
-            "query": {
-                "bool": {
-                    "must_not": [{"term": {"entity_id": record.entity_id}}],
-                    "should": [
-                        {"match": {"completion_description": {"query": search_text, "boost": 2}}},
-                        {"match": {"original_description": {"query": search_text, "boost": 1}}},
-                    ],
-                    "minimum_should_match": 1,
-                }
-            },
-            "size": 20,
-            "_source": ["entity_id", "completion_description", "original_description", "column_name"],
-        }
-        resp = es.search(index="metadata_columns", body=body)
-        hits = resp["hits"]["hits"]
+        hits = search_reference(search_text, record.entity_id)
     except Exception as e:
-        logger.warning(f"ES search failed for references: {e}")
-        return {"success": True, "data": []}
+        logger.warning(f"Failed to search reference for {record.entity_id}: {e}")
+        hits = []
 
     # 去重：每个 entity_id 取最高分的一条
     best: dict[str, dict] = {}

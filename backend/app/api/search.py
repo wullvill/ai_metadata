@@ -1,6 +1,6 @@
 """元数据搜索 API"""
 from fastapi import APIRouter
-from app.services.elasticsearch import search_all, get_filter_options
+from app.services.search_index import search_all, get_filter_options
 from app.api.schemas import SearchRequest
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])

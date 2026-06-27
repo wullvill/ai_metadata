@@ -122,7 +122,7 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
 
 async def _fetch_columns(target: dict) -> list[dict]:
     """从 ES 获取表的字段列表"""
-    from app.services.elasticsearch import get_columns
+    from app.services.search_index import get_columns
     try:
         return get_columns(target.get("entity_id", ""))
     except Exception as e:

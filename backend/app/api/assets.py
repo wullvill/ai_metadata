@@ -1,6 +1,6 @@
 """Asset detail API"""
 from fastapi import APIRouter, HTTPException
-from app.services.elasticsearch import get_asset_by_id, get_columns
+from app.services.search_index import get_asset_by_id, get_columns
 
 router = APIRouter(prefix="/api/v1/assets", tags=["assets"])
 
