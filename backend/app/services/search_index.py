@@ -940,23 +940,58 @@ def search_reference(search_text: str, exclude_entity_id: str) -> list[dict]:
 
 def _tantivy_search_reference(search_text: str, exclude_entity_id: str) -> list[dict]:
     import tantivy
-    index = _get_tantivy_columns_index()
-    index.reload()
-    searcher = index.searcher()
+    results: list[dict] = []
+    seen_entity_ids: set[str] = set()
+
+    # 1) 搜索 metadata 索引（表级相似资产），按 entity_id 分组取最高分
+    meta_index = _get_tantivy_index()
+    meta_index.reload()
+    meta_searcher = meta_index.searcher()
     try:
-        query = index.parse_query(search_text, ["completion_description", "original_description"])
+        meta_query = meta_index.parse_query(search_text, ["display_name", "description", "table_name"])
+        meta_hits = meta_searcher.search(meta_query, 30)
+        meta_raw = meta_hits.hits if hasattr(meta_hits, "hits") else meta_hits
     except Exception:
-        return []
-    hits = searcher.search(query, 40)
-    raw_hits = hits.hits if hasattr(hits, "hits") else hits
-    results = []
-    for idx, hit in enumerate(raw_hits):
-        doc = _hit_to_dict(hit, searcher)
+        meta_raw = []
+
+    for idx, hit in enumerate(meta_raw):
+        doc = _hit_to_dict(hit, meta_searcher)
+        eid = _field_first(doc, "entity_id")
+        if eid == exclude_entity_id or eid in seen_entity_ids:
+            continue
+        display = _field_first(doc, "display_name") or _field_first(doc, "description") or eid
+        results.append({
+            "_score": 20.0 - idx,
+            "_source": {
+                "entity_id": eid,
+                "entity_type": _field_first(doc, "entity_type"),
+                "display_name": display,
+                "description": _field_first(doc, "description"),
+                "table_name": _field_first(doc, "table_name"),
+                "completion_description": "",
+                "original_description": _field_first(doc, "description"),
+            },
+        })
+        seen_entity_ids.add(eid)
+
+    # 2) 搜索 columns 索引（列级参考）
+    cols_index = _get_tantivy_columns_index()
+    cols_index.reload()
+    cols_searcher = cols_index.searcher()
+    try:
+        cols_query = cols_index.parse_query(search_text, ["completion_description", "original_description"])
+        cols_hits = cols_searcher.search(cols_query, 40)
+        cols_raw = cols_hits.hits if hasattr(cols_hits, "hits") else cols_hits
+    except Exception:
+        cols_raw = []
+
+    for idx, hit in enumerate(cols_raw):
+        doc = _hit_to_dict(hit, cols_searcher)
         eid = _field_first(doc, "entity_id")
         if eid == exclude_entity_id:
             continue
         results.append({
-            "_score": 20.0 - idx,
+            "_score": 15.0 - idx * 0.5,
             "_source": {
                 "entity_id": eid,
                 "completion_description": _field_first(doc, "completion_description"),
@@ -966,4 +1001,5 @@ def _tantivy_search_reference(search_text: str, exclude_entity_id: str) -> list[
         })
         if len(results) >= 20:
             break
+
     return results

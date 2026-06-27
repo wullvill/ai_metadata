@@ -162,50 +162,105 @@ async def get_review_references(record_id: str, db: AsyncSession = Depends(get_d
     if not search_text:
         return {"success": True, "data": []}
 
-    from app.services.search_index import search_reference
+    # 搜索文本无中文时，引入列描述增强检索效果
+    if not _has_chinese(search_text) and record.entity_type == "table":
+        try:
+            from app.services.search_index import get_columns
+            cols = get_columns(record.entity_id)
+            col_terms = []
+            for c in (cols or []):
+                od = c.get("original_description", "")
+                if od and od.strip():
+                    col_terms.append(od.strip())
+            if col_terms:
+                search_text = search_text + " " + " ".join(col_terms[:10])
+                logger.info(f"Enriched search_text with {len(col_terms)} column descriptions for {record.entity_id}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch columns for reference search: {e}")
+
+    from app.services.search_index import search_reference, get_samples
+    hits = []
     try:
         hits = search_reference(search_text, record.entity_id)
     except Exception as e:
         logger.warning(f"Failed to search reference for {record.entity_id}: {e}")
-        hits = []
 
-    # 去重：每个 entity_id 取最高分的一条
+    # 同时引入样例资产（已标注 is_sample 的表）作为参考来源
+    # 记录 sample 的 display_name 以便后续合并时优先使用中文名
+    sample_displays: dict[str, str] = {}
     best: dict[str, dict] = {}
+    try:
+        samples = get_samples()
+        for s in (samples or []):
+            eid = s.get("entity_id", "")
+            if eid == record.entity_id:
+                continue
+            display = s.get("display_name") or s.get("description") or eid
+            sample_displays[eid] = display[:48]
+            best[eid] = {
+                "entity_id": eid,
+                "display_name": display[:48],
+                "similarity": 0.5,
+            }
+    except Exception as e:
+        logger.warning(f"Failed to fetch samples for reference: {e}")
+
+    # 去重：每个 entity_id 取最高分的一条；sample 的中文名优先显示
     for hit in hits:
         src = hit["_source"]
         eid = src.get("entity_id", "")
         score = hit["_score"] or 0
-        if eid not in best or score > best[eid]["similarity"]:
+        norm = round(_normalize_score(score), 4)
+        if eid not in best or norm > best[eid]["similarity"]:
+            display = sample_displays.get(eid) or _pick_display(src)
             best[eid] = {
                 "entity_id": eid,
-                "display_name": _pick_display(src),
-                "similarity": round(_normalize_score(score), 4),
+                "display_name": display,
+                "similarity": norm,
             }
 
     refs = sorted(best.values(), key=lambda x: x["similarity"], reverse=True)[:8]
+    logger.info(f"References: {len(refs)} results, top3={[(r['entity_id'], r['similarity']) for r in refs[:3]]}")
     return {"success": True, "data": refs}
 
 
 def _pick_display(src: dict) -> str:
     """从 ES 文档中提取合适的展示文本"""
+    # 优先用已有中文名
+    display = src.get("display_name") or ""
+    if display and display.strip():
+        return display[:48]
+    # 列级补全描述
     desc = src.get("completion_description") or src.get("original_description") or ""
-    return desc[:48] if desc else src.get("entity_id", "")
+    if desc and desc.strip():
+        return desc[:48]
+    # 表级原始描述
+    desc = src.get("description") or ""
+    if desc and desc.strip():
+        return desc[:48]
+    return src.get("entity_id", "")
+
+
+def _has_chinese(text: str) -> bool:
+    """检查文本是否包含中文字符"""
+    return any('一' <= ch <= '鿿' for ch in text)
 
 
 def _build_ref_search_text(target: dict) -> str:
-    """从 target_data 构建中文检索文本"""
+    """从 target_data 构建检索文本"""
+    table_name = target.get("table_name") or ""
     parts = []
     desc = target.get("current_description") or target.get("table_description") or ""
     if desc and desc.strip():
         parts.append(desc.strip())
     display = target.get("current_display_name") or ""
-    if display and display.strip():
+    if display and display.strip() and display.strip() != table_name:
         parts.append(display.strip())
     tags = target.get("current_tags") or []
     if tags:
         parts.extend(tags)
-    if target.get("table_name"):
-        parts.append(target["table_name"])
+    if table_name:
+        parts.append(table_name)
     return " ".join(parts) if parts else ""
 
 
