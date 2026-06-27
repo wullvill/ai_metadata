@@ -33,9 +33,9 @@ def upgrade() -> None:
         sa.Column("updated_by", sa.String(64), nullable=False, server_default="system"),
         sa.PrimaryKeyConstraint("id"),
     )
+    # Use dialect-safe syntax for seed data
     op.execute(
-        "INSERT INTO pipeline_config (id, config) VALUES (1, '{}'::json) "
-        "ON CONFLICT (id) DO NOTHING"
+        "INSERT OR IGNORE INTO pipeline_config (id, config) VALUES (1, '{}')"
     )
 
 
