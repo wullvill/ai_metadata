@@ -124,12 +124,18 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
 
 
 async def _supersede_old(db: AsyncSession, entity_id: str) -> int:
-    """Mark pending/auto_approved records for the same entity as superseded."""
+    """Mark pending/auto_approved records for the same entity as superseded.
+
+    Matches both the table record itself AND any column records whose
+    entity_ids follow the pattern ``{entity_id}.{column_name}``, so that
+    re-triggering a table completion correctly supersedes old column records.
+    """
     from sqlalchemy import update as sql_update
     result = await db.execute(
         sql_update(CompletionRecord)
         .where(
-            CompletionRecord.entity_id == entity_id,
+            (CompletionRecord.entity_id == entity_id) |
+            (CompletionRecord.entity_id.like(f"{entity_id}.%")),
             CompletionRecord.review_status.in_(["pending_review", "auto_approved"]),
         )
         .values(review_status="superseded")
