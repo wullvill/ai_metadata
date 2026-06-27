@@ -147,7 +147,10 @@ def search_all(
     schema_name: str | None = None,
     data_type: str | None = None,
     db_type: str | None = None,
-    top_k: int = 20,
+    is_sample: bool | None = None,
+    sort_by: str | None = None,
+    sort_desc: bool = False,
+    top_k: int = 200,
 ) -> list[dict]:
     """通用搜索（用于前端搜索页）"""
     es = get_es_client()
@@ -163,6 +166,17 @@ def search_all(
         must.append({"term": {"data_type": data_type}})
     if db_type:
         must.append({"term": {"db_type": db_type}})
+    if is_sample is True:
+        must.append({"bool": {"should": [
+            {"term": {"is_sample": True}},
+            {"term": {"is_sample": "true"}},
+        ], "minimum_should_match": 1}})
+    elif is_sample is False:
+        must.append({"bool": {"should": [
+            {"term": {"is_sample": False}},
+            {"term": {"is_sample": "false"}},
+            {"bool": {"must_not": {"exists": {"field": "is_sample"}}}},
+        ], "minimum_should_match": 1}})
 
     has_query = bool(query_text.strip())
     has_filters = bool(must)
@@ -199,6 +213,34 @@ def search_all(
             "pre_tags": ["<mark>"],
             "post_tags": ["</mark>"],
         }
+
+    # Build ES sort: primary(user or default) + system + name as tiebreakers
+    _ES_SORT_MAP: dict[str, str] = {
+        "name": "table_name.raw",
+        "system": "system.keyword",
+        "database": "database",
+        "schema": "schema_name",
+        "entity_type": "entity_type",
+        "completion_status": "completion_status",
+        "updated_time": "updated_time",
+    }
+    order = "desc" if sort_desc else "asc"
+    sort_list: list[dict[str, str | dict]] = []
+    added_fields: set[str] = set()
+
+    def _add_sort(field_key: str, default_order: str = "asc") -> None:
+        es_field = _ES_SORT_MAP.get(field_key)
+        if es_field and es_field not in added_fields:
+            sort_list.append({es_field: {"order": order if field_key == sort_by else default_order}})
+            added_fields.add(es_field)
+
+    if sort_by and sort_by in _ES_SORT_MAP:
+        _add_sort(sort_by, order)
+    _add_sort("updated_time", "desc")
+    _add_sort("system", "asc")
+    _add_sort("name", "asc")
+
+    body["sort"] = sort_list
 
     resp = es.search(index=INDEX_NAME, body=body)
     return [

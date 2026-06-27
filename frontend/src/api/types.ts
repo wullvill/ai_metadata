@@ -96,6 +96,9 @@ export interface SearchParams {
   query: string
   entity_type?: string
   db_type?: string
+  is_sample?: boolean
+  sort_by?: string
+  sort_desc?: boolean
   page?: number
   page_size?: number
 }

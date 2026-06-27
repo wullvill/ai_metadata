@@ -52,22 +52,9 @@ const localFilters = reactive({
 
 // ── Sort state ──
 const sortState = reactive<SortInfo>({
-  sortBy: '',
-  descending: false,
+  sortBy: 'updated_time',
+  descending: true,
 })
-
-// ── Sort accessor map ──
-const SORT_ACCESSORS: Record<string, (row: AssetDisplay) => string> = {
-  name: (r) => (r.table_name || r.entity_id),
-  system: (r) => r.system || r.database || '',
-  entity_type: (r) => r.entity_type,
-  database: (r) => r.database,
-  schema: (r) => r.schema,
-  business_domain: (r) => r.business_domain || '',
-  classification: (r) => r.classification || '',
-  completion_status: (r) => r.completion_status || (r.has_description ? 'completed' : 'pending'),
-  updated_time: (r) => r.updated_time || '',
-}
 
 // ── Selection state ──
 const selectedRowKeys = ref<string[]>([])
@@ -90,6 +77,12 @@ const COMPLETION_OPTIONS = [
   { label: '待补全', value: 'pending' },
   { label: '处理中', value: 'processing' },
   { label: '已完成', value: 'completed' },
+]
+
+const SAMPLE_OPTIONS = [
+  { label: '全部', value: '' },
+  { label: '样本', value: 'true' },
+  { label: '非样本', value: 'false' },
 ]
 
 	// API-loaded filter options
@@ -140,23 +133,6 @@ const filteredResults = computed(() => {
       const status = r.completion_status || (r.has_description ? 'completed' : 'pending')
       return status === localFilters.completion
     })
-  }
-
-  // Sort
-  if (sortState.sortBy) {
-    const accessor = SORT_ACCESSORS[sortState.sortBy]
-    if (accessor) {
-      const desc = sortState.descending
-      list = [...list].sort((a, b) => {
-        let va = accessor(a)
-        let vb = accessor(b)
-        va = typeof va === 'string' ? va.toLowerCase() : va
-        vb = typeof vb === 'string' ? vb.toLowerCase() : vb
-        if (va < vb) return desc ? 1 : -1
-        if (va > vb) return desc ? -1 : 1
-        return 0
-      })
-    }
   }
 
   return list
@@ -305,12 +281,17 @@ function handleSortChange(sort: TableProps['sort']) {
   // TDesign sort can be SortInfo or SortInfo[]
   const s = !sort ? null : Array.isArray(sort) ? sort[0] : sort
   if (!s || !s.sortBy) {
-    sortState.sortBy = ''
-    sortState.descending = false
-    return
+    sortState.sortBy = 'updated_time'
+    sortState.descending = true
+    filters.sort_by = 'updated_time'
+    filters.sort_desc = true
+  } else {
+    sortState.sortBy = s.sortBy as string
+    sortState.descending = s.descending
+    filters.sort_by = s.sortBy as string
+    filters.sort_desc = s.descending
   }
-  sortState.sortBy = s.sortBy as string
-  sortState.descending = s.descending
+  search()
 }
 
 // ── Search handler ──
@@ -330,6 +311,19 @@ function setTypeFilter(value: string) {
 function setCompletionFilter(value: string) {
   localFilters.completion = value
   selectedRowKeys.value = []
+}
+
+function setSampleFilter(value: string) {
+  if (value === 'true') filters.is_sample = true
+  else if (value === 'false') filters.is_sample = false
+  else filters.is_sample = undefined
+  search()
+}
+
+function sampleFilterActive(chipValue: string): boolean {
+  if (chipValue === 'true') return filters.is_sample === true
+  if (chipValue === 'false') return filters.is_sample === false
+  return filters.is_sample === undefined
 }
 
 function setDomainFilter(value: string) {
@@ -513,6 +507,19 @@ onMounted(async () => {
               class="filter-chip"
               :class="{ active: localFilters.completion === opt.value }"
               @click="setCompletionFilter(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <span class="filter-sep" />
+          <!-- Sample filter chips -->
+          <div class="filter-group">
+            <button
+              v-for="opt in SAMPLE_OPTIONS"
+              :key="opt.value"
+              class="filter-chip"
+              :class="{ active: sampleFilterActive(opt.value) }"
+              @click="setSampleFilter(opt.value)"
             >
               {{ opt.label }}
             </button>

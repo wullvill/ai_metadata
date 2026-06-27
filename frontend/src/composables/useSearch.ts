@@ -12,6 +12,9 @@ export function useSearch() {
     query: '',
     entity_type: '' as string,
     db_type: '',
+    is_sample: undefined as boolean | undefined,
+    sort_by: 'updated_time',
+    sort_desc: true,
   })
 
   const pagination = reactive({
@@ -27,6 +30,9 @@ export function useSearch() {
         query: filters.query,
         entity_type: filters.entity_type || undefined,
         db_type: filters.db_type || undefined,
+        is_sample: filters.is_sample,
+        sort_by: filters.sort_by || undefined,
+        sort_desc: filters.sort_desc,
         page: pagination.page,
         page_size: pagination.page_size,
       })

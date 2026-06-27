@@ -23,7 +23,10 @@ async def search_metadata(req: SearchRequest):
         schema_name=req.schema_name,
         data_type=req.data_type,
         db_type=req.db_type,
-        top_k=100,
+        is_sample=req.is_sample,
+        sort_by=req.sort_by,
+        sort_desc=req.sort_desc,
+        top_k=200,
     )
     # 分页
     start = (req.page - 1) * req.page_size
