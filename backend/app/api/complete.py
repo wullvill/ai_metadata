@@ -19,6 +19,8 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
     """手动触发元数据补全。表级补全会级联补全其所有字段。"""
     target = req.target.model_dump(by_alias=True)
 
+    await _supersede_old(db, target["entity_id"])
+
     pipeline = get_pipeline()
 
     result = await pipeline.ainvoke({
@@ -85,6 +87,7 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
                     completion_result=col_state.get("completion_result"),
                     quality_check=col_state.get("quality_check"),
                     review_status=col_state.get("review_status") or "rejected",
+                    parent_record_id=record.id,
                 )
                 db.add(col_record)
 
@@ -118,6 +121,20 @@ async def trigger_completion(req: CompletionTriggerRequest, db: AsyncSession = D
         quality_check=record.quality_check,
         created_at=record.created_at.isoformat() if record.created_at else "",
     )
+
+
+async def _supersede_old(db: AsyncSession, entity_id: str) -> int:
+    """Mark pending/auto_approved records for the same entity as superseded."""
+    from sqlalchemy import update as sql_update
+    result = await db.execute(
+        sql_update(CompletionRecord)
+        .where(
+            CompletionRecord.entity_id == entity_id,
+            CompletionRecord.review_status.in_(["pending_review", "auto_approved"]),
+        )
+        .values(review_status="superseded")
+    )
+    return result.rowcount
 
 
 async def _fetch_columns(target: dict) -> list[dict]:
