@@ -1,7 +1,7 @@
 """Stage 1: 双路检索 (Milvus + ES)"""
 import asyncio
 from .state import CompletionState
-from app.services import milvus, elasticsearch, embedding
+from app.services import vector_store, search_index, embedding
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -70,28 +70,28 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     if query_embedding is not None:
         milvus_future = loop.run_in_executor(
             None,
-            lambda: milvus.search_similar(
+            lambda: vector_store.search_similar(
                 query_embedding, target["entity_type"], top_k=retrieval["milvus_top_k"], database=db
             ),
         )
         # 同时检索设计文档作为补全参考
         design_future = loop.run_in_executor(
             None,
-            lambda: milvus.search_similar(
+            lambda: vector_store.search_similar(
                 query_embedding, "table_design", top_k=3, database=None
             ),
         )
 
     es_future = loop.run_in_executor(
         None,
-        lambda: elasticsearch.search_keyword(
+        lambda: search_index.search_keyword(
             search_text, target["entity_type"], database=db, schema_name=schema_name, top_k=retrieval["es_keyword_top_k"]
         ),
     )
 
     siblings_future = loop.run_in_executor(
         None,
-        lambda: elasticsearch.search_siblings(
+        lambda: search_index.search_siblings(
             db, schema_name, target["entity_type"], top_k=retrieval["es_siblings_top_k"]
         ),
     )
@@ -142,7 +142,7 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     # 查询样本并置顶
     if retrieval["sample_boost"]:
         try:
-            sample_docs = elasticsearch.get_samples()
+            sample_docs = search_index.get_samples()
             if sample_docs:
                 logger.info(f"Stage 1: {len(sample_docs)} samples found, boosting rank")
                 for doc in sample_docs:
@@ -200,7 +200,7 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
 def _get_sibling_columns(target: dict) -> list[dict]:
     """获取同表其他字段"""
     try:
-        siblings = elasticsearch.search_all(
+        siblings = search_index.search_all(
             query_text=target["table_name"],
             entity_type="column",
             top_k=20,
