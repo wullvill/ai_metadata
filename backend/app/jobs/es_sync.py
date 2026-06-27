@@ -2,7 +2,7 @@
 from app.celery_app import celery_app
 from app.database import SessionLocal
 from app.models.completion import CompletionRecord
-from app.services.elasticsearch import reset_completion_status, update_completed_metadata, update_completed_columns
+from app.services.search_index import reset_completion_status, update_completed_metadata, update_completed_columns
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)

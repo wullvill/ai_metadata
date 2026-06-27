@@ -17,7 +17,7 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="Asia/Shanghai",
     enable_utc=True,
-    worker_pool="gevent",
+    worker_pool="solo",
     task_track_started=True,
     # task_acks_late=True with gevent pool: all tasks share a single OS
     # process via greenlets. If the process crashes, all unacknowledged tasks
