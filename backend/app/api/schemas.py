@@ -55,6 +55,7 @@ class SearchRequest(BaseModel):
     data_type: str | None = None
     db_type: str | None = None
     is_sample: bool | None = None
+    completion_status: str | None = None
     sort_by: str | None = None
     sort_desc: bool = False
     page: int = Field(default=1, ge=1)

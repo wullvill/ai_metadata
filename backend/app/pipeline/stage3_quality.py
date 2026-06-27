@@ -16,7 +16,10 @@ RULES = {
         "message": "display_name 或 description 缺失",
     },
     "display_name_no_code": {
-        "check": lambda r, t: not bool(re.search(r'[a-z]{3,}', r.get("display_name", "").lower())),
+        "check": lambda r, t: (
+            bool(re.search(r'[一-鿿]', r.get("display_name", "")))
+            or not bool(re.search(r'[a-z]{3,}', r.get("display_name", "").lower()))
+        ),
         "severity": "warning",
         "message": "中文名包含大段英文，疑似代码而非中文名",
     },

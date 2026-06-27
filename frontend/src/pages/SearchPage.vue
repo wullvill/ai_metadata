@@ -47,7 +47,6 @@ const localFilters = reactive({
   type: '',
   dbType: '',
   businessDomain: '',
-  completion: '',
 })
 
 // ── Sort state ──
@@ -127,12 +126,6 @@ const filteredResults = computed(() => {
   }
   if (localFilters.businessDomain) {
     list = list.filter(r => r.business_domain === localFilters.businessDomain)
-  }
-  if (localFilters.completion) {
-    list = list.filter(r => {
-      const status = r.completion_status || (r.has_description ? 'completed' : 'pending')
-      return status === localFilters.completion
-    })
   }
 
   return list
@@ -309,8 +302,8 @@ function setTypeFilter(value: string) {
 }
 
 function setCompletionFilter(value: string) {
-  localFilters.completion = value
-  selectedRowKeys.value = []
+  filters.completion_status = value
+  search()
 }
 
 function setSampleFilter(value: string) {
@@ -505,7 +498,7 @@ onMounted(async () => {
               v-for="opt in COMPLETION_OPTIONS"
               :key="opt.value"
               class="filter-chip"
-              :class="{ active: localFilters.completion === opt.value }"
+              :class="{ active: filters.completion_status === opt.value }"
               @click="setCompletionFilter(opt.value)"
             >
               {{ opt.label }}

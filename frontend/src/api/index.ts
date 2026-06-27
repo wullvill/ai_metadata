@@ -34,6 +34,7 @@ export async function searchMetadata(params: SearchParams): Promise<SearchRespon
     entity_type: params.entity_type,
     db_type: params.db_type,
     is_sample: params.is_sample,
+    completion_status: params.completion_status,
     sort_by: params.sort_by,
     sort_desc: params.sort_desc,
     page: params.page,

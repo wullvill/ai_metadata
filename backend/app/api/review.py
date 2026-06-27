@@ -190,7 +190,7 @@ async def get_review_references(record_id: str, db: AsyncSession = Depends(get_d
     sample_displays: dict[str, str] = {}
     best: dict[str, dict] = {}
     try:
-        samples = get_samples()
+        samples = get_samples(database=target.get("database"))
         for s in (samples or []):
             eid = s.get("entity_id", "")
             if eid == record.entity_id:

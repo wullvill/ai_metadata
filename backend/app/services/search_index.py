@@ -309,6 +309,7 @@ def search_all(
     data_type: str | None = None,
     db_type: str | None = None,
     is_sample: bool | None = None,
+    completion_status: str | None = None,
     sort_by: str | None = None,
     sort_desc: bool = False,
     top_k: int = 200,
@@ -316,7 +317,7 @@ def search_all(
     if settings.search_index_backend == "tantivy":
         return _tantivy_search_all(
             query_text, entity_type, database, schema_name,
-            data_type, db_type, is_sample, sort_by, sort_desc, top_k,
+            data_type, db_type, is_sample, completion_status, sort_by, sort_desc, top_k,
         )
     else:
         from app.services.elasticsearch import search_all as _es_search_all
@@ -334,6 +335,7 @@ def _tantivy_search_all(
     data_type: str | None = None,
     db_type: str | None = None,
     is_sample: bool | None = None,
+    completion_status: str | None = None,
     sort_by: str | None = None,
     sort_desc: bool = False,
     top_k: int = 200,
@@ -359,7 +361,7 @@ def _tantivy_search_all(
         else:
             raw_hits = []
     else:
-        raw_hits = [(0.0, doc_dict) for doc_dict in _scan_all_docs(index, searcher, limit=top_k * 3)]
+        raw_hits = [(0.0, doc_dict) for doc_dict in _scan_all_docs(index, searcher, limit=100000)]
 
     for hit in raw_hits:
         doc = _hit_to_dict(hit, searcher) if isinstance(hit, tuple) else _doc_to_dict(hit)
@@ -380,6 +382,16 @@ def _tantivy_search_all(
         elif is_sample is False:
             sample_val = _field_first(doc, "is_sample", "false")
             if sample_val.lower() in ("true", "1"):
+                continue
+        if completion_status:
+            doc_status = _field_first(doc, "completion_status")
+            doc_has_desc = _field_first(doc, "has_description")
+            if completion_status == "pending":
+                # pending 包含显式设置为 pending 的，以及从未补全过的（status 为空且无描述）
+                is_pending = (doc_status == "pending") or (doc_status == "" and doc_has_desc != "true")
+                if not is_pending:
+                    continue
+            elif doc_status != completion_status:
                 continue
 
         score = hit[0] if isinstance(hit, tuple) else 1.0
@@ -406,7 +418,8 @@ def _tantivy_search_all(
             "highlight": {},
         }
         results.append(item)
-        if len(results) >= top_k:
+        # 有查询时按相关度提前截断；空查询时全量收集后再排序截断
+        if has_query and len(results) >= top_k:
             break
 
     _SORT_MAP = {
@@ -657,15 +670,15 @@ def _tantivy_set_sample(entity_ids: list[str], is_sample: bool) -> int:
     return count
 
 
-def get_samples() -> list[dict]:
+def get_samples(database: str | None = None) -> list[dict]:
     if settings.search_index_backend == "tantivy":
-        return _tantivy_get_samples()
+        return _tantivy_get_samples(database)
     else:
         from app.services.elasticsearch import get_samples as _es_samples
-        return _es_samples()
+        return _es_samples(database)
 
 
-def _tantivy_get_samples() -> list[dict]:
+def _tantivy_get_samples(database: str | None = None) -> list[dict]:
     index = _get_tantivy_index()
     index.reload()
     searcher = index.searcher()
@@ -673,6 +686,8 @@ def _tantivy_get_samples() -> list[dict]:
     for doc in _scan_all_docs(index, searcher, limit=2000):
         sample_val = _field_first(doc, "is_sample", "false")
         if sample_val.lower() not in ("true", "1"):
+            continue
+        if database and _field_first(doc, "database") != database:
             continue
         results.append({
             "entity_id": _field_first(doc, "entity_id"),

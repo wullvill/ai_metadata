@@ -142,7 +142,7 @@ async def stage1_retrieve(state: CompletionState) -> CompletionState:
     # 查询样本并置顶
     if retrieval["sample_boost"]:
         try:
-            sample_docs = search_index.get_samples()
+            sample_docs = search_index.get_samples(database=db)
             if sample_docs:
                 logger.info(f"Stage 1: {len(sample_docs)} samples found, boosting rank")
                 for doc in sample_docs:

@@ -97,6 +97,7 @@ export interface SearchParams {
   entity_type?: string
   db_type?: string
   is_sample?: boolean
+  completion_status?: string
   sort_by?: string
   sort_desc?: boolean
   page?: number

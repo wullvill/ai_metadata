@@ -24,6 +24,7 @@ async def search_metadata(req: SearchRequest):
         data_type=req.data_type,
         db_type=req.db_type,
         is_sample=req.is_sample,
+        completion_status=req.completion_status,
         sort_by=req.sort_by,
         sort_desc=req.sort_desc,
         top_k=200,
