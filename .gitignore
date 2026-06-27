@@ -7,10 +7,11 @@ __pycache__/
 # Environment
 .env
 
-# Database & generated data
-*.db
+# Database — seed data (metadata.db/tantivy/chroma) committed, ephemeral excluded
 *.db-journal
-backend/data/
+backend/data/celery.db
+backend/data/test.db
+backend/data/completion.db
 data/
 backend/app/data/
 
@@ -28,3 +29,7 @@ frontend/test-results/
 
 # OS
 .DS_Store
+
+# Tantivy lock files (generated at runtime)
+*.tantivy-meta.lock
+*.tantivy-writer.lock
