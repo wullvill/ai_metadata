@@ -99,3 +99,52 @@ async def test_columns_endpoint_non_table(client, seeded_records):
     data = resp.json()
     assert data["success"] is True
     assert data["data"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_columns_only_returns_current_batch(db_session):
+    """两个批次的列记录不会互相干扰"""
+    b1 = CompletionRecord(
+        id="b1-table", entity_id="db.s.t", entity_type="table",
+        target_data={}, review_status="superseded",
+    )
+    b2 = CompletionRecord(
+        id="b2-table", entity_id="db.s.t", entity_type="table",
+        target_data={}, review_status="pending_review",
+    )
+    db_session.add_all([b1, b2])
+    await db_session.flush()
+
+    for i in range(2):
+        db_session.add(CompletionRecord(
+            id=f"b1-col-{i}", entity_id=f"db.s.t.col_{i}",
+            entity_type="column", parent_record_id="b1-table",
+            target_data={}, review_status="superseded",
+        ))
+    for i in range(2):
+        db_session.add(CompletionRecord(
+            id=f"b2-col-{i}", entity_id=f"db.s.t.col_{i}",
+            entity_type="column", parent_record_id="b2-table",
+            target_data={}, review_status="pending_review",
+        ))
+    await db_session.commit()
+
+    result = await db_session.execute(
+        select(CompletionRecord).where(
+            CompletionRecord.entity_type == "column",
+            CompletionRecord.parent_record_id == "b2-table",
+        )
+    )
+    cols = result.scalars().all()
+    assert len(cols) == 2
+    for c in cols:
+        assert c.parent_record_id == "b2-table"
+
+    # 清理测试数据，避免污染数据库影响后续测试
+    all_ids = ["b1-table", "b2-table"] + [f"b1-col-{i}" for i in range(2)] + [f"b2-col-{i}" for i in range(2)]
+    cleanup_result = await db_session.execute(
+        select(CompletionRecord).where(CompletionRecord.id.in_(all_ids))
+    )
+    for record in cleanup_result.scalars().all():
+        await db_session.delete(record)
+    await db_session.commit()
