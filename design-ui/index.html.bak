@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据治理智能元数据补全系统 — 产品原型</title>
+<style>
+/* ============================================================
+   DESIGN SYSTEM — Industrial Precision
+   ============================================================ */
+:root {
+  /* Palette */
+  --color-bg: #f8f7f4;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fafaf9;
+  --color-border: #e7e5e3;
+  --color-border-hover: #d1cfcc;
+  --color-text-primary: #1a1c1e;
+  --color-text-secondary: #5f6368;
+  --color-text-tertiary: #93989e;
+  --color-text-inverse: #ffffff;
+  --color-accent: #0d9488;
+  --color-accent-hover: #0f766e;
+  --color-accent-subtle: #f0fdfa;
+  --color-accent-border: #ccfbf1;
+  --color-sidebar: #1a2332;
+  --color-sidebar-hover: #243447;
+  --color-sidebar-active: #0d9488;
+  --color-sidebar-text: #94a3b8;
+  --color-sidebar-text-active: #ffffff;
+  --color-nav-border: #2d3d52;
+
+  /* Status */
+  --color-approved: #16a34a;
+  --color-approved-bg: #f0fdf4;
+  --color-pending: #d97706;
+  --color-pending-bg: #fffbeb;
+  --color-rejected: #dc2626;
+  --color-rejected-bg: #fef2f2;
+  --color-modified: #7c3aed;
+  --color-modified-bg: #faf5ff;
+
+  /* Confidence */
+  --color-confidence-high: #16a34a;
+  --color-confidence-mid: #d97706;
+  --color-confidence-low: #dc2626;
+
+  /* Spacing rhythm */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.12);
+
+  /* Typography */
+  --font-display: "Georgia", "Times New Roman", serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* Layout */
+  --sidebar-width: 220px;
+  --header-height: 0px;
+}
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--color-sidebar);
+  color: var(--color-sidebar-text);
+  padding: var(--space-lg) 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  z-index: 100;
+  border-right: 1px solid var(--color-nav-border);
+}
+
+.sidebar-brand {
+  padding: 0 var(--space-lg) var(--space-lg);
+  border-bottom: 1px solid var(--color-nav-border);
+  margin-bottom: var(--space-md);
+}
+
+.sidebar-brand h1 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-inverse);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-brand .subtitle {
+  font-size: 0.7rem;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: var(--space-xs);
+}
+
+.sidebar-nav { flex: 1; padding: 0 var(--space-sm); }
+
+.sidebar-nav a {
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--duration-fast) var(--ease-out);
+  margin-bottom: 2px;
+  cursor: pointer;
+}
+
+.sidebar-nav a:hover { background: var(--color-sidebar-hover); color: var(--color-sidebar-text-active); }
+.sidebar-nav a.active { background: var(--color-accent); color: var(--color-sidebar-text-active); }
+
+.sidebar-nav .nav-icon { width: 20px; text-align: center; font-size: 1rem; flex-shrink: 0; }
+
+.sidebar-footer {
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--color-nav-border);
+  font-size: 0.7rem;
+  color: var(--color-sidebar-text);
+  opacity: 0.6;
+}
+
+/* ============================================================
+   MAIN
+   ============================================================ */
+.main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+
+/* Page transition */
+.page-section {
+  display: none;
+  flex: 1;
+  animation: pageEnter var(--duration-slow) var(--ease-out);
+}
+.page-section.active { display: flex; flex-direction: column; }
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.page-header {
+  padding: var(--space-xl) var(--space-2xl) var(--space-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.page-header p {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin-top: var(--space-xs);
+}
+
+/* ============================================================
+   CONTENT AREA
+   ============================================================ */
+.page-content {
+  flex: 1;
+  padding: var(--space-lg) var(--space-2xl);
+  overflow-y: auto;
+}
+
+/* ============================================================
+   SEARCH PAGE
+   ============================================================ */
+.search-area {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-input-row {
+  display: flex; gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.search-input-wrapper .search-icon {
+  position: absolute; left: var(--space-md); top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  font-size: 1rem;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+  padding: 10px var(--space-md) 10px 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  background: var(--color-surface-raised);
+  transition: all var(--duration-fast) var(--ease-out);
+  outline: none;
+}
+
+.search-input-wrapper input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--space-sm);
+  padding: 10px var(--space-lg);
+  border: none; border-radius: var(--radius-md);
+  font-size: 0.875rem; font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn-primary { background: var(--color-accent); color: white; }
+.btn-primary:hover { background: var(--color-accent-hover); box-shadow: var(--shadow-md); }
+.btn-secondary { background: var(--color-surface); color: var(--color-text-primary); border: 1px solid var(--color-border); }
+.btn-secondary:hover { background: var(--color-surface-raised); border-color: var(--color-border-hover); }
+.btn-ghost { background: transparent; color: var(--color-text-secondary); }
+.btn-ghost:hover { background: var(--color-surface-raised); }
+.btn-sm { padding: 6px var(--space-md); font-size: 0.8rem; }
+.btn-xs { padding: 3px var(--space-sm); font-size: 0.7rem; border-radius: var(--radius-sm); }
+
+.btn-approved { background: var(--color-approved-bg); color: var(--color-approved); border: 1px solid #bbf7d0; }
+.btn-approved:hover { background: #dcfce7; }
+.btn-rejected { background: var(--color-rejected-bg); color: var(--color-rejected); border: 1px solid #fecaca; }
+.btn-rejected:hover { background: #fee2e2; }
+.btn-pending { background: var(--color-pending-bg); color: var(--color-pending); border: 1px solid #fde68a; }
+.btn-pending:hover { background: #fef3c7; }
+
+/* Filters */
+.filter-row {
+  display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: center;
+}
+
+.filter-select {
+  padding: 7px var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: var(--font-body);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.filter-select:focus { border-color: var(--color-accent); }
+
+.filter-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 var(--space-sm); }
+
+.result-count {
+  font-size: 0.8rem; color: var(--color-text-tertiary);
+  margin-left: auto;
+}
+
+/* Results */
+.results-area { display: flex; flex-direction: column; gap: var(--space-md); }
+
+.metadata-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: all var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+.metadata-card:hover {
+  border-color: var(--color-accent-border);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.metadata-card.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+
+.card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.card-identity { display: flex; align-items: center; gap: var(--space-sm); }
+
+.entity-badge {
+  display: inline-block;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.entity-badge.table { background: #dbeafe; color: #1d4ed8; }
+.entity-badge.column { background: #fce7f3; color: #be185d; }
+
+.card-name {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.card-path {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+}
+
+.card-display-name {
+  font-size: 0.95rem; font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.card-meta {
+  display: flex; gap: var(--space-lg); flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.card-meta-item {
+  font-size: 0.8rem; color: var(--color-text-secondary);
+}
+
+.card-meta-item span.label {
+  color: var(--color-text-tertiary); margin-right: var(--space-xs);
+}
+
+.card-actions {
+  display: flex; gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.card-status {
+  display: flex; align-items: center; gap: var(--space-sm);
+}
+
+.completion-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px var(--space-sm);
+  border-radius: 999px;
+  font-size: 0.7rem; font-weight: 600;
+}
+
+.completion-badge.complete { background: var(--color-approved-bg); color: var(--color-approved); }
+.completion-badge.incomplete { background: var(--color-pending-bg); color: var(--color-pending); }
+
+/* Completion Panel */
+.completion-panel {
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  box-shadow: var(--shadow-lg);
+  animation: panelSlideIn var(--duration-slow) var(--ease-out);
+}
+
+@keyframes panelSlideIn {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-header h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.panel-close {
+  background: none; border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer; font-size: 1.2rem;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.panel-close:hover { color: var(--color-text-primary); background: var(--color-surface-raised); }
+
+.completion-result-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.completion-field { }
+.completion-field label {
+  display: block;
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--color-text-tertiary);
+  margin-bottom: var(--space-xs);
+}
+
+.completion-field .field-value {
+  font-size: 0.9rem; color: var(--color-text-primary);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  min-height: 36px;
+}
+
+.completion-field.full-width { grid-column: 1 / -1; }
+
+.tags-list {
+  display: flex; gap: var(--space-xs); flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px var(--space-sm);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.confidence-display {
+  display: flex; align-items: center; gap: var(--space-md);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.confidence-ring {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1.1rem;
+  position: relative;
+}
+
+.confidence-ring::before {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(var(--ring-color, var(--color-accent)) calc(var(--confidence, 0) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+}
+
+.confidence-high { background: var(--color-approved-bg); color: var(--color-approved); }
+.confidence-mid { background: var(--color-pending-bg); color: var(--color-pending); }
+.confidence-low { background: var(--color-rejected-bg); color: var(--color-rejected); }
+
+.confidence-detail { font-size: 0.8rem; color: var(--color-text-secondary); }
+.confidence-detail strong { color: var(--color-text-primary); }
+
+/* ============================================================
+   REVIEW PAGE
+   ============================================================ */
+.review-toolbar {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.review-toolbar .selected-count {
+  font-size: 0.85rem; color: var(--color-text-secondary);
+  margin-left: auto;
+}
+
+.data-table-wrapper {
+  flex: 1;
+  overflow-x: auto;
+  background: var(--color-surface);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.data-table th {
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 2px solid var(--color-border);
+  font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-raised);
+  position: sticky; top: 0; z-index: 10;
+}
+
+.data-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table tbody tr {
+  transition: background var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover { background: var(--color-surface-raised); }
+.data-table tbody tr.selected-row { background: var(--color-accent-subtle); }
+
+.data-table .checkbox-cell { width: 40px; text-align: center; }
+
+.status-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: var(--space-sm);
+}
+
+.status-dot.auto_approved { background: var(--color-approved); }
+.status-dot.pending_review { background: var(--color-pending); }
+.status-dot.rejected { background: var(--color-rejected); }
+.status-dot.approved { background: var(--color-approved); }
+.status-dot.modified { background: var(--color-modified); }
+
+.mono-text { font-family: var(--font-mono); font-size: 0.8rem; }
+
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+}
+
+.pagination-btns { display: flex; gap: var(--space-sm); }
+.pagination-btns button {
+  padding: 6px var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.pagination-btns button:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); }
+.pagination-btns button:disabled { opacity: 0.4; cursor: default; }
+.pagination-btns button.active-page { background: var(--color-accent); color: white; border-color: var(--color-accent); }
+
+/* ============================================================
+   DIALOG / DRAWER
+   ============================================================ */
+.dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  animation: fadeIn var(--duration-fast) var(--ease-out);
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.dialog {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  width: 90%;
+  max-width: 720px;
+  max-height: 85vh;
+  display: flex; flex-direction: column;
+  animation: dialogIn var(--duration-normal) var(--ease-out);
+}
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.96) translateY(16px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dialog-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog-header h3 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; }
+
+.dialog-body {
+  flex: 1; overflow-y: auto; padding: var(--space-lg);
+}
+
+.dialog-footer {
+  display: flex; gap: var(--space-sm); justify-content: flex-end;
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.section-label {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--color-text-tertiary);
+  margin: var(--space-lg) 0 var(--space-sm);
+}
+
+.info-grid {
+  display: grid; grid-template-columns: 120px 1fr;
+  gap: var(--space-sm); font-size: 0.85rem;
+}
+
+.info-grid .ilabel { color: var(--color-text-tertiary); }
+.info-grid .ivalue { color: var(--color-text-primary); font-weight: 500; }
+
+.violation-item {
+  display: flex; align-items: flex-start; gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-pending-bg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xs);
+  font-size: 0.85rem;
+}
+
+.violation-item.warning { background: var(--color-pending-bg); }
+.violation-item.info { background: #f0f9ff; }
+.violation-item .severity-badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.severity-badge.warning { background: #fef3c7; color: #92400e; }
+.severity-badge.info { background: #dbeafe; color: #1e40af; }
+.severity-badge.critical { background: #fecaca; color: #991b1b; }
+
+/* ============================================================
+   HISTORY PAGE
+   ============================================================ */
+.history-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card .stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem; font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.stat-card .stat-label {
+  font-size: 0.75rem; color: var(--color-text-tertiary);
+  margin-top: var(--space-xs);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* ============================================================
+   CONFIG PAGE
+   ============================================================ */
+.config-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.config-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.config-card h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-row:last-child { border-bottom: none; }
+
+.config-row .config-label {
+  font-size: 0.85rem; color: var(--color-text-primary);
+}
+
+.config-row .config-desc {
+  font-size: 0.75rem; color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.config-value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px var(--space-sm);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+}
+
+.slider-container {
+  display: flex; align-items: center; gap: var(--space-sm);
+}
+
+.slider-container input[type="range"] {
+  width: 100px;
+  accent-color: var(--color-accent);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-lg);
+  color: var(--color-text-tertiary);
+}
+
+.empty-state .empty-icon { font-size: 3rem; margin-bottom: var(--space-md); opacity: 0.4; }
+.empty-state h4 { font-size: 1rem; color: var(--color-text-secondary); margin-bottom: var(--space-sm); }
+.empty-state p { font-size: 0.85rem; }
+
+/* Toast */
+.toast-container {
+  position: fixed; top: var(--space-lg); right: var(--space-lg);
+  z-index: 2000;
+  display: flex; flex-direction: column; gap: var(--space-sm);
+}
+
+.toast {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn var(--duration-normal) var(--ease-out);
+  display: flex; align-items: center; gap: var(--space-sm);
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.toast.success { background: #166534; color: white; }
+.toast.info { background: #1e40af; color: white; }
+.toast.warning { background: #92400e; color: white; }
+
+/* Pipeline indicator */
+.pipeline-indicator {
+  display: flex; align-items: center; gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  margin-top: var(--space-md);
+}
+
+.pipeline-stage {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; color: var(--color-text-tertiary);
+}
+
+.pipeline-stage .stage-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--color-border);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.pipeline-stage.active .stage-dot { background: var(--color-accent); box-shadow: 0 0 6px var(--color-accent); }
+.pipeline-stage.done .stage-dot { background: var(--color-approved); }
+.pipeline-stage.active { color: var(--color-text-primary); font-weight: 600; }
+.pipeline-stage.done { color: var(--color-text-secondary); }
+
+.pipeline-arrow { color: var(--color-border); margin: 0 4px; }
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .completion-result-grid { grid-template-columns: 1fr; }
+  .config-grid { grid-template-columns: 1fr; }
+  .history-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .sidebar { width: 60px; }
+  .sidebar-brand h1, .sidebar-brand .subtitle, .sidebar-nav a span:not(.nav-icon), .sidebar-footer { display: none; }
+  .main { margin-left: 60px; }
+  .page-header, .page-content { padding: var(--space-md); }
+  .filter-row { flex-direction: column; }
+  .search-input-row { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <h1>智能元数据<br>补全系统</h1>
+    <div class="subtitle">Data Governance</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a data-page="search" class="active" onclick="navigateTo('search')">
+      <span class="nav-icon">&#9906;</span> 元数据搜索
+    </a>
+    <a data-page="review" onclick="navigateTo('review')">
+      <span class="nav-icon">&#9745;</span> 审核工作台
+      <span id="review-badge" style="margin-left:auto;background:var(--color-pending);color:#fff;border-radius:999px;padding:1px 7px;font-size:0.65rem;font-weight:700;">5</span>
+    </a>
+    <a data-page="history" onclick="navigateTo('history')">
+      <span class="nav-icon">&#9776;</span> 补全历史
+    </a>
+    <a data-page="config" onclick="navigateTo('config')">
+      <span class="nav-icon">&#9881;</span> 系统配置
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    &copy; 2026 数据治理平台 v1.0
+  </div>
+</aside>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<main class="main">
+
+  <!-- ==========================================================
+       SEARCH PAGE
+       ========================================================== -->
+  <section class="page-section active" id="page-search">
+    <div class="page-header">
+      <h2>元数据搜索</h2>
+      <p>搜索数据库表/字段，选中后触发智能补全</p>
+    </div>
+
+    <div class="page-content">
+      <!-- Completion Result Panel (hidden by default) -->
+      <div class="completion-panel" id="completion-panel" style="display:none;">
+        <div class="panel-header">
+          <h3>&#10003; 智能补全结果</h3>
+          <button class="panel-close" onclick="closeCompletionPanel()">&times;</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-lg);">
+          <span class="entity-badge table">TABLE</span>
+          <span class="mono-text" id="cp-entity-id">mysql.bi.t_user_order</span>
+        </div>
+
+        <!-- Pipeline stages -->
+        <div class="pipeline-indicator" id="pipeline-stages">
+          <div class="pipeline-stage done"><span class="stage-dot"></span>双路检索</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-stage done"><span class="stage-dot"></span>LLM 生成</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-stage done"><span class="stage-dot"></span>质量校验</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-stage active"><span class="stage-dot"></span>审核路由</div>
+        </div>
+
+        <div class="completion-result-grid" style="margin-top:var(--space-lg);">
+          <div class="completion-field">
+            <label>中文名称</label>
+            <div class="field-value" id="cp-display-name">用户订单表</div>
+          </div>
+          <div class="completion-field">
+            <label>所属业务域</label>
+            <div class="field-value" id="cp-business-domain">用户域</div>
+          </div>
+          <div class="completion-field">
+            <label>敏感级别</label>
+            <div class="field-value" id="cp-sensitive-level">L3</div>
+          </div>
+          <div class="completion-field">
+            <label>标签</label>
+            <div class="field-value">
+              <div class="tags-list" id="cp-tags">
+                <span class="tag">用户</span>
+                <span class="tag">订单</span>
+                <span class="tag">交易</span>
+                <span class="tag">核心业务</span>
+              </div>
+            </div>
+          </div>
+          <div class="completion-field full-width">
+            <label>业务描述</label>
+            <div class="field-value" id="cp-description">记录用户创建的订单信息，包含订单编号、用户标识、订单状态、支付信息及金额等核心交易数据，是电商平台订单管理的核心表。</div>
+          </div>
+        </div>
+
+        <div class="confidence-display">
+          <div class="confidence-ring confidence-high" style="--confidence: 0.87; --ring-color: var(--color-approved);" id="cp-confidence-ring">0.87</div>
+          <div class="confidence-detail">
+            <div><strong>置信度: 0.87</strong> — 自动采纳</div>
+            <div style="margin-top:4px;">
+              检索上下文得分 0.92 &middot; 无规则命中 &middot; 无冲突检测
+            </div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:var(--space-sm);">
+            <button class="btn btn-approved btn-sm">确认采纳</button>
+            <button class="btn btn-secondary btn-sm">修改</button>
+            <button class="btn btn-rejected btn-sm">拒绝</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Area -->
+      <div class="search-area">
+        <div class="search-input-row">
+          <div class="search-input-wrapper">
+            <span class="search-icon">&#128269;</span>
+            <input type="text" id="search-input" placeholder="搜索表名、字段名、中文名、描述..." value="用户订单">
+          </div>
+          <button class="btn btn-primary" onclick="doSearch()">&#128269; 搜索</button>
+        </div>
+
+        <div class="filter-row">
+          <select class="filter-select" id="filter-database">
+            <option value="">全部数据库</option>
+            <option>mysql</option>
+            <option>postgresql</option>
+            <option>hive</option>
+          </select>
+          <select class="filter-select" id="filter-schema">
+            <option value="">全部 Schema</option>
+            <option>bi</option>
+            <option>ods</option>
+            <option>dwd</option>
+            <option>ads</option>
+          </select>
+          <select class="filter-select" id="filter-type">
+            <option value="">全部类型</option>
+            <option value="table">表 (Table)</option>
+            <option value="column">字段 (Column)</option>
+          </select>
+          <span class="filter-divider"></span>
+          <select class="filter-select" id="filter-completion">
+            <option value="">全部补全状态</option>
+            <option value="complete">已补全</option>
+            <option value="incomplete">未补全</option>
+          </select>
+          <span class="result-count" id="result-count">找到 156 条结果</span>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="results-area" id="search-results">
+        <!-- Dynamically filled -->
+      </div>
+
+      <div class="pagination" style="margin-top:var(--space-lg);">
+        <span>共 156 条，第 1/8 页</span>
+        <div class="pagination-btns">
+          <button disabled>上一页</button>
+          <button class="active-page">1</button>
+          <button>2</button>
+          <button>3</button>
+          <button>&hellip;</button>
+          <button>8</button>
+          <button>下一页</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================
+       REVIEW PAGE
+       ========================================================== -->
+  <section class="page-section" id="page-review">
+    <div class="page-header">
+      <h2>审核工作台</h2>
+      <p>审核 AI 生成的补全建议，确认后自动回写 OpenMetadata</p>
+    </div>
+
+    <div class="review-toolbar">
+      <select class="filter-select" id="review-filter-status">
+        <option value="">全部状态</option>
+        <option value="pending_review">待审核</option>
+        <option value="auto_approved">自动采纳</option>
+        <option value="approved">已确认</option>
+        <option value="rejected">已拒绝</option>
+      </select>
+      <select class="filter-select" id="review-filter-type">
+        <option value="">全部类型</option>
+        <option value="table">表</option>
+        <option value="column">字段</option>
+      </select>
+      <select class="filter-select" id="review-filter-db">
+        <option value="">全部数据库</option>
+        <option>mysql</option>
+        <option>postgresql</option>
+        <option>hive</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="showToast('列表已刷新', 'info')">&#8635; 刷新</button>
+
+      <span class="selected-count" id="selected-count-display" style="display:none;">已选 <strong>0</strong> 项</span>
+      <button class="btn btn-approved btn-sm" id="btn-batch-approve" style="display:none;" onclick="batchApprove()">批量确认</button>
+      <button class="btn btn-rejected btn-sm" id="btn-batch-reject" style="display:none;" onclick="batchReject()">批量拒绝</button>
+    </div>
+
+    <div class="data-table-wrapper">
+      <table class="data-table" id="review-table">
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" id="select-all-reviews" onclick="toggleSelectAll(this, '.review-checkbox')"></th>
+            <th>实体</th>
+            <th>类型</th>
+            <th>数据库</th>
+            <th>AI 建议</th>
+            <th>置信度</th>
+            <th>状态</th>
+            <th>提交时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="review-tbody">
+          <!-- Dynamically filled -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <span>共 23 条待审核记录，第 1/3 页</span>
+      <div class="pagination-btns">
+        <button disabled>上一页</button>
+        <button class="active-page">1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>下一页</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================
+       HISTORY PAGE
+       ========================================================== -->
+  <section class="page-section" id="page-history">
+    <div class="page-header">
+      <h2>补全历史</h2>
+      <p>查询所有补全记录，追溯完整操作链路</p>
+    </div>
+
+    <div class="page-content">
+      <div class="history-stats">
+        <div class="stat-card">
+          <div class="stat-value">1,247</div>
+          <div class="stat-label">总补全次数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">68%</div>
+          <div class="stat-label">自动采纳率</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">89%</div>
+          <div class="stat-label">审核通过率</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">92%</div>
+          <div class="stat-label">当前覆盖率</div>
+        </div>
+      </div>
+
+      <div class="search-area">
+        <div class="filter-row">
+          <input type="text" class="filter-select" placeholder="搜索实体 ID..." style="flex:1;min-width:200px;">
+          <select class="filter-select">
+            <option value="">全部状态</option>
+            <option>auto_approved</option>
+            <option>approved</option>
+            <option>modified</option>
+            <option>rejected</option>
+          </select>
+          <select class="filter-select">
+            <option value="">最近 7 天</option>
+            <option>今天</option>
+            <option>最近 30 天</option>
+            <option>全部时间</option>
+          </select>
+          <button class="btn btn-primary btn-sm">筛选</button>
+          <span style="margin-left:auto;font-size:0.8rem;color:var(--color-text-tertiary);">共 1,247 条记录</span>
+        </div>
+      </div>
+
+      <div class="data-table-wrapper" style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>实体 ID</th>
+              <th>类型</th>
+              <th>中文名</th>
+              <th>置信度</th>
+              <th>状态</th>
+              <th>审核人</th>
+              <th>提交时间</th>
+              <th>审核时间</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <!-- Dynamically filled -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <span>第 1/63 页</span>
+        <div class="pagination-btns">
+          <button disabled>上一页</button>
+          <button class="active-page">1</button>
+          <button>2</button>
+          <button>3</button>
+          <button>...63</button>
+          <button>下一页</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================
+       CONFIG PAGE
+       ========================================================== -->
+  <section class="page-section" id="page-config">
+    <div class="page-header">
+      <h2>系统配置</h2>
+      <p>管理质量规则阈值、模型路由策略和同步参数</p>
+    </div>
+
+    <div class="page-content">
+      <div class="config-grid">
+        <div class="config-card">
+          <h3>质量规则阈值</h3>
+          <div class="config-row">
+            <div>
+              <div class="config-label">自动采纳最低置信度</div>
+              <div class="config-desc">达到此阈值且无 warning/critical 将自动采纳</div>
+            </div>
+            <div class="slider-container">
+              <input type="range" min="0.5" max="0.95" step="0.05" value="0.80" oninput="this.nextElementSibling.textContent=this.value">
+              <span class="config-value">0.80</span>
+            </div>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">拒绝阈值</div>
+              <div class="config-desc">低于此阈值或有 critical 将直接拒绝</div>
+            </div>
+            <div class="slider-container">
+              <input type="range" min="0.3" max="0.8" step="0.05" value="0.60" oninput="this.nextElementSibling.textContent=this.value">
+              <span class="config-value">0.60</span>
+            </div>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">描述长度下限</div>
+              <div class="config-desc">低于此字符数触发降权</div>
+            </div>
+            <span class="config-value">10 字符</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">描述长度上限</div>
+              <div class="config-desc">超过此字符数触发降权</div>
+            </div>
+            <span class="config-value">300 字符</span>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <h3>模型路由策略</h3>
+          <div class="config-row">
+            <div>
+              <div class="config-label">主力模型</div>
+              <div class="config-desc">常规补全场景使用</div>
+            </div>
+            <span class="config-value">qwen-plus</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">备选模型</div>
+              <div class="config-desc">主力模型超时/不可用时切换</div>
+            </div>
+            <span class="config-value">deepseek-v3</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">复杂表升级模型</div>
+              <div class="config-desc">兄弟表描述丰富的表使用</div>
+            </div>
+            <span class="config-value">qwen-max</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">LLM 超时时间</div>
+              <div class="config-desc">单次 LLM 调用的最大等待时间</div>
+            </div>
+            <span class="config-value">30s</span>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <h3>检索参数</h3>
+          <div class="config-row">
+            <div>
+              <div class="config-label">向量检索 Top-K</div>
+              <div class="config-desc">Milvus 语义检索返回数量</div>
+            </div>
+            <span class="config-value">20</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">关键词检索 Top-K</div>
+              <div class="config-desc">ES 关键词检索返回数量</div>
+            </div>
+            <span class="config-value">20</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">RRF 融合 Top-K</div>
+              <div class="config-desc">双路检索融合后最终返回数量</div>
+            </div>
+            <span class="config-value">15</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">RRF 常数 k</div>
+              <div class="config-desc">融合排序平滑因子</div>
+            </div>
+            <span class="config-value">60</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">兄弟表检索数量</div>
+              <div class="config-desc">同 Schema 下附加检索数</div>
+            </div>
+            <span class="config-value">5</span>
+          </div>
+        </div>
+
+        <div class="config-card">
+          <h3>同步参数</h3>
+          <div class="config-row">
+            <div>
+              <div class="config-label">增量同步间隔</div>
+              <div class="config-desc">从 OpenMetadata 拉取增量变更</div>
+            </div>
+            <span class="config-value">15 分钟</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">全量同步时间</div>
+              <div class="config-desc">每日全量重建索引窗口</div>
+            </div>
+            <span class="config-value">02:00 AM</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">回写最大重试次数</div>
+              <div class="config-desc">OpenMetadata 回写失败重试</div>
+            </div>
+            <span class="config-value">3</span>
+          </div>
+          <div class="config-row">
+            <div>
+              <div class="config-label">同步失败告警阈值</div>
+              <div class="config-desc">连续失败达到此次数触发告警</div>
+            </div>
+            <span class="config-value">3</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:var(--space-lg);text-align:right;">
+        <button class="btn btn-secondary">恢复默认</button>
+        <button class="btn btn-primary" style="margin-left:var(--space-sm);" onclick="showToast('配置已保存', 'success')">保存配置</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================================================
+     REVIEW DETAIL DIALOG
+     ============================================================ -->
+<div class="dialog-overlay" id="review-dialog" style="display:none;">
+  <div class="dialog">
+    <div class="dialog-header">
+      <h3 id="dialog-title">审核详情</h3>
+      <button class="panel-close" onclick="closeDialog()">&times;</button>
+    </div>
+    <div class="dialog-body" id="dialog-body">
+      <!-- Original Metadata -->
+      <div class="section-label">原始元数据</div>
+      <div class="info-grid">
+        <span class="ilabel">实体 ID</span><span class="ivalue mono-text">mysql.bi.t_user_order</span>
+        <span class="ilabel">实体类型</span><span class="ivalue"><span class="entity-badge table">TABLE</span></span>
+        <span class="ilabel">表名</span><span class="ivalue mono-text">t_user_order</span>
+        <span class="ilabel">当前中文名</span><span class="ivalue" style="color:var(--color-text-tertiary);">（空）</span>
+        <span class="ilabel">当前描述</span><span class="ivalue" style="color:var(--color-text-tertiary);">（空）</span>
+      </div>
+
+      <!-- AI Suggestion -->
+      <div class="section-label">AI 补全建议</div>
+      <div class="info-grid">
+        <span class="ilabel">中文名</span><span class="ivalue">用户订单表</span>
+        <span class="ilabel">业务描述</span><span class="ivalue">记录用户创建的订单信息，包含订单编号、用户标识、订单状态、支付信息及金额等核心交易数据。</span>
+        <span class="ilabel">业务域</span><span class="ivalue">用户域</span>
+        <span class="ilabel">标签</span><span class="ivalue"><span class="tag">用户</span> <span class="tag">订单</span> <span class="tag">交易</span> <span class="tag">核心业务</span></span>
+        <span class="ilabel">置信度</span><span class="ivalue"><strong style="color:var(--color-confidence-high);">0.87</strong></span>
+      </div>
+
+      <!-- Quality Check -->
+      <div class="section-label">质量校验</div>
+      <div class="violation-item warning">
+        <span class="severity-badge warning">WARNING</span>
+        <span>display_name 包含大段英文字符 (t_user_order)</span>
+      </div>
+      <div class="violation-item info">
+        <span class="severity-badge info">INFO</span>
+        <span>标签覆盖：新标签与已有标签无交集</span>
+      </div>
+
+      <!-- Reference Context -->
+      <div class="section-label">检索参考上下文 (Top 3)</div>
+      <div style="display:flex;flex-direction:column;gap:var(--space-sm);">
+        <div style="padding:var(--space-sm) var(--space-md);background:var(--color-surface-raised);border-radius:var(--radius-md);font-size:0.8rem;">
+          <strong>t_order_info</strong> <span class="entity-badge table" style="margin:0 var(--space-xs);">TABLE</span> 订单信息表<br>
+          <span style="color:var(--color-text-tertiary);">来源: milvus | 相似度: 0.94</span>
+        </div>
+        <div style="padding:var(--space-sm) var(--space-md);background:var(--color-surface-raised);border-radius:var(--radius-md);font-size:0.8rem;">
+          <strong>t_trade_record</strong> <span class="entity-badge table" style="margin:0 var(--space-xs);">TABLE</span> 交易记录表<br>
+          <span style="color:var(--color-text-tertiary);">来源: es | 得分: 8.2</span>
+        </div>
+        <div style="padding:var(--space-sm) var(--space-md);background:var(--color-surface-raised);border-radius:var(--radius-md);font-size:0.8rem;">
+          <strong>t_user</strong> <span class="entity-badge table" style="margin:0 var(--space-xs);">TABLE</span> 用户基础信息表<br>
+          <span style="color:var(--color-text-tertiary);">来源: both (rrf rank 3) | 相似度: 0.89</span>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-rejected" onclick="showToast('已拒绝', 'info'); closeDialog();">拒绝</button>
+      <button class="btn btn-pending btn-sm">修改后确认</button>
+      <button class="btn btn-approved" onclick="showToast('已确认采纳，正在回写 OpenMetadata', 'success'); closeDialog();">确认采纳</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TOAST CONTAINER
+     ============================================================ -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* ================================================================
+   APPLICATION STATE & NAVIGATION
+   ================================================================ */
+let currentPage = 'search';
+let selectedEntity = null;
+
+function navigateTo(page) {
+  currentPage = page;
+
+  // Update sidebar
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+
+  // Update pages
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+
+  // Close dialog if open
+  closeDialog();
+}
+
+/* ================================================================
+   SEARCH PAGE
+   ================================================================ */
+const mockResults = [
+  { entity_id: 'mysql.bi.t_user_order', entity_type: 'table', database: 'mysql', schema: 'bi', table_name: 't_user_order', display_name: '用户订单表', description: '记录用户创建的订单信息', completion: 'incomplete', col_count: 23, data_size: '1.2 GB' },
+  { entity_id: 'mysql.bi.t_order_item', entity_type: 'table', database: 'mysql', schema: 'bi', table_name: 't_order_item', display_name: '订单明细表', description: '订单商品明细记录', completion: 'complete', col_count: 15, data_size: '3.8 GB' },
+  { entity_id: 'mysql.bi.t_order_status', entity_type: 'table', database: 'mysql', schema: 'bi', table_name: 't_order_status', display_name: '', description: '', completion: 'incomplete', col_count: 8, data_size: '128 MB' },
+  { entity_id: 'mysql.bi.t_user_order.order_id', entity_type: 'column', database: 'mysql', schema: 'bi', table_name: 't_user_order', column_name: 'order_id', data_type: 'bigint', display_name: '订单ID', description: '订单唯一标识', completion: 'complete' },
+  { entity_id: 'mysql.bi.t_user_order.user_id', entity_type: 'column', database: 'mysql', schema: 'bi', table_name: 't_user_order', column_name: 'user_id', data_type: 'varchar(64)', display_name: '', description: '', completion: 'incomplete' },
+  { entity_id: 'mysql.bi.t_user_order.status', entity_type: 'column', database: 'mysql', schema: 'bi', table_name: 't_user_order', column_name: 'status', data_type: 'tinyint', display_name: '订单状态', description: '0-待支付 1-已支付 2-已发货 3-已完成 4-已取消', completion: 'complete' },
+  { entity_id: 'postgresql.ods.user_behavior_log', entity_type: 'table', database: 'postgresql', schema: 'ods', table_name: 'user_behavior_log', display_name: '', description: '', completion: 'incomplete', col_count: 42, data_size: '25 GB' },
+  { entity_id: 'hive.dwd.order_fact', entity_type: 'table', database: 'hive', schema: 'dwd', table_name: 'order_fact', display_name: '订单事实表', description: '订单数据宽表，用于分析报表', completion: 'complete', col_count: 67, data_size: '120 GB' },
+  { entity_id: 'mysql.bi.t_payment', entity_type: 'table', database: 'mysql', schema: 'bi', table_name: 't_payment', display_name: '支付记录表', description: '记录所有支付流水', completion: 'complete', col_count: 18, data_size: '5.1 GB' },
+];
+
+const pipelineStages = [
+  { id: 'retrieve', label: '双路检索' },
+  { id: 'generate', label: 'LLM 生成' },
+  { id: 'quality', label: '质量校验' },
+  { id: 'review', label: '审核路由' },
+];
+
+function doSearch() {
+  const resultsArea = document.getElementById('search-results');
+  resultsArea.innerHTML = mockResults.map((r, i) => `
+    <div class="metadata-card ${selectedEntity === r.entity_id ? 'selected' : ''}" onclick="selectEntity('${r.entity_id}')" id="card-${i}">
+      <div class="card-header">
+        <div class="card-identity">
+          <span class="entity-badge ${r.entity_type}">${r.entity_type === 'table' ? 'TABLE' : 'COL'}</span>
+          <span class="card-name">${r.entity_type === 'table' ? r.table_name : r.column_name}</span>
+          ${r.display_name ? `<span class="card-display-name" style="margin-left:var(--space-md);">${r.display_name}</span>` : ''}
+        </div>
+        <div class="card-status">
+          <span class="completion-badge ${r.completion}">${r.completion === 'complete' ? '&#10003; 已补全' : '! 未补全'}</span>
+        </div>
+      </div>
+      <div class="card-path">${r.entity_id}</div>
+      <div class="card-meta">
+        ${r.entity_type === 'table' ? `
+          <span class="card-meta-item"><span class="label">字段数</span>${r.col_count}</span>
+          <span class="card-meta-item"><span class="label">数据量</span>${r.data_size}</span>
+        ` : `
+          <span class="card-meta-item"><span class="label">数据类型</span>${r.data_type}</span>
+          <span class="card-meta-item"><span class="label">所属表</span>${r.table_name}</span>
+        `}
+        <span class="card-meta-item"><span class="label">数据库</span>${r.database}</span>
+        <span class="card-meta-item"><span class="label">Schema</span>${r.schema}</span>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); triggerCompletion('${r.entity_id}')">&#10029; 智能补全</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); showToast('已复制实体 ID', 'info')">&#128203; 复制 ID</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('result-count').textContent = `找到 ${mockResults.length} 条结果`;
+}
+
+function selectEntity(id) {
+  selectedEntity = id;
+  document.querySelectorAll('.metadata-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.metadata-card').forEach(c => {
+    if (c.querySelector('.card-name')?.textContent === mockResults.find(r => r.entity_id === id)?.table_name ||
+        c.querySelector('.card-name')?.textContent === mockResults.find(r => r.entity_id === id)?.column_name) {
+      c.classList.add('selected');
+    }
+  });
+  // Re-render to update selected state
+  doSearch();
+}
+
+function triggerCompletion(entityId) {
+  // Scroll to top to show panel
+  const panel = document.getElementById('completion-panel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Update entity info
+  const entity = mockResults.find(r => r.entity_id === entityId);
+  document.getElementById('cp-entity-id').textContent = entityId;
+
+  // Simulate pipeline animation
+  simulatePipeline();
+}
+
+function simulatePipeline() {
+  const stages = document.querySelectorAll('#pipeline-stages .pipeline-stage');
+  stages.forEach(s => { s.className = 'pipeline-stage'; });
+
+  const steps = [
+    () => { stages[0].className = 'pipeline-stage active'; },
+    () => { stages[0].className = 'pipeline-stage done'; stages[1].className = 'pipeline-stage active'; },
+    () => { stages[1].className = 'pipeline-stage done'; stages[2].className = 'pipeline-stage active'; },
+    () => { stages[2].className = 'pipeline-stage done'; stages[3].className = 'pipeline-stage active'; },
+  ];
+
+  steps.forEach((step, i) => setTimeout(step, i * 800));
+}
+
+function closeCompletionPanel() {
+  document.getElementById('completion-panel').style.display = 'none';
+}
+
+/* ================================================================
+   REVIEW PAGE
+   ================================================================ */
+const mockReviews = [
+  { id: 'rev-001', entity_id: 'mysql.bi.t_user_order', entity_type: 'table', database: 'mysql', display_name: '用户订单表', confidence: 0.87, status: 'pending_review', submitted_at: '2026-05-17 14:22', violations: 2 },
+  { id: 'rev-002', entity_id: 'mysql.bi.t_order_status', entity_type: 'table', database: 'mysql', display_name: '订单状态配置表', confidence: 0.73, status: 'pending_review', submitted_at: '2026-05-17 13:45', violations: 1 },
+  { id: 'rev-003', entity_id: 'mysql.bi.t_user_order.user_id', entity_type: 'column', database: 'mysql', display_name: '用户标识', confidence: 0.91, status: 'auto_approved', submitted_at: '2026-05-17 12:30', violations: 0 },
+  { id: 'rev-004', entity_id: 'postgresql.ods.user_behavior_log', entity_type: 'table', database: 'postgresql', display_name: '用户行为日志', confidence: 0.65, status: 'pending_review', submitted_at: '2026-05-17 11:18', violations: 3 },
+  { id: 'rev-005', entity_id: 'mysql.bi.t_refund.status', entity_type: 'column', database: 'mysql', display_name: '退款状态', confidence: 0.42, status: 'rejected', submitted_at: '2026-05-17 10:05', violations: 2 },
+  { id: 'rev-006', entity_id: 'mysql.bi.t_user_order.amount', entity_type: 'column', database: 'mysql', display_name: '订单金额', confidence: 0.88, status: 'pending_review', submitted_at: '2026-05-17 09:52', violations: 0 },
+  { id: 'rev-007', entity_id: 'hive.dwd.order_fact.pay_time', entity_type: 'column', database: 'hive', display_name: '支付时间', confidence: 0.94, status: 'auto_approved', submitted_at: '2026-05-16 18:30', violations: 0 },
+  { id: 'rev-008', entity_id: 'mysql.bi.t_payment.pay_channel', entity_type: 'column', database: 'mysql', display_name: '支付渠道', confidence: 0.79, status: 'pending_review', submitted_at: '2026-05-16 16:15', violations: 1 },
+];
+
+const statusLabels = {
+  auto_approved: '自动采纳',
+  pending_review: '待审核',
+  rejected: '已拒绝',
+  approved: '已确认',
+  modified: '已修改',
+};
+
+function renderReviewTable() {
+  const tbody = document.getElementById('review-tbody');
+  tbody.innerHTML = mockReviews.map(r => `
+    <tr onclick="openReviewDetail('${r.id}')" data-review-id="${r.id}">
+      <td class="checkbox-cell"><input type="checkbox" class="review-checkbox" onclick="event.stopPropagation(); updateSelection()"></td>
+      <td><span class="mono-text">${r.entity_id}</span></td>
+      <td><span class="entity-badge ${r.entity_type}">${r.entity_type === 'table' ? 'TABLE' : 'COL'}</span></td>
+      <td>${r.database}</td>
+      <td>${r.display_name}</td>
+      <td>
+        <span class="confidence-ring ${r.confidence >= 0.80 ? 'confidence-high' : r.confidence >= 0.60 ? 'confidence-mid' : 'confidence-low'}" style="width:36px;height:36px;font-size:0.75rem;display:inline-flex;">
+          ${r.confidence.toFixed(2)}
+        </span>
+      </td>
+      <td><span class="status-dot ${r.status}"></span>${statusLabels[r.status] || r.status}</td>
+      <td style="font-size:0.8rem;color:var(--color-text-tertiary);">${r.submitted_at}</td>
+      <td>
+        <button class="btn btn-approved btn-xs" onclick="event.stopPropagation(); showToast('已确认', 'success')">确认</button>
+        <button class="btn btn-rejected btn-xs" onclick="event.stopPropagation(); showToast('已拒绝', 'info')" style="margin-left:4px;">拒绝</button>
+      </td>
+    </tr>
+  `).join('');
+
+  updateSelection();
+}
+
+function toggleSelectAll(checkbox, selector) {
+  document.querySelectorAll(selector).forEach(cb => { cb.checked = checkbox.checked; });
+  updateSelection();
+}
+
+function updateSelection() {
+  const checked = document.querySelectorAll('.review-checkbox:checked').length;
+  const display = document.getElementById('selected-count-display');
+  const btnApprove = document.getElementById('btn-batch-approve');
+  const btnReject = document.getElementById('btn-batch-reject');
+
+  if (checked > 0) {
+    display.style.display = 'inline';
+    display.innerHTML = `已选 <strong>${checked}</strong> 项`;
+    btnApprove.style.display = 'inline-flex';
+    btnReject.style.display = 'inline-flex';
+  } else {
+    display.style.display = 'none';
+    btnApprove.style.display = 'none';
+    btnReject.style.display = 'none';
+  }
+
+  document.getElementById('review-badge').textContent = checked || mockReviews.filter(r => r.status === 'pending_review').length;
+}
+
+function openReviewDetail(id) {
+  const review = mockReviews.find(r => r.id === id);
+  if (!review) return;
+
+  document.getElementById('dialog-title').textContent = `审核详情 — ${id}`;
+  document.getElementById('review-dialog').style.display = 'flex';
+}
+
+function closeDialog() {
+  document.getElementById('review-dialog').style.display = 'none';
+}
+
+function batchApprove() {
+  const count = document.querySelectorAll('.review-checkbox:checked').length;
+  showToast(`已批量确认 ${count} 条记录`, 'success');
+}
+
+function batchReject() {
+  const count = document.querySelectorAll('.review-checkbox:checked').length;
+  showToast(`已批量拒绝 ${count} 条记录`, 'info');
+}
+
+/* ================================================================
+   HISTORY PAGE
+   ================================================================ */
+const mockHistory = [
+  { entity_id: 'mysql.bi.t_user_order', entity_type: 'table', display_name: '用户订单表', confidence: 0.87, status: 'approved', reviewer: '张三', submitted_at: '2026-05-17 14:22', reviewed_at: '2026-05-17 14:28' },
+  { entity_id: 'mysql.bi.t_order_item', entity_type: 'table', display_name: '订单明细表', confidence: 0.92, status: 'auto_approved', reviewer: '-', submitted_at: '2026-05-17 14:15', reviewed_at: '2026-05-17 14:15' },
+  { entity_id: 'mysql.bi.t_user_order.status', entity_type: 'column', display_name: '订单状态', confidence: 0.94, status: 'auto_approved', reviewer: '-', submitted_at: '2026-05-17 13:40', reviewed_at: '2026-05-17 13:40' },
+  { entity_id: 'postgresql.ods.user_behavior_log', entity_type: 'table', display_name: '用户行为日志', confidence: 0.65, status: 'modified', reviewer: '李四', submitted_at: '2026-05-17 11:18', reviewed_at: '2026-05-17 11:45' },
+  { entity_id: 'mysql.bi.t_refund.status', entity_type: 'column', display_name: '退款状态', confidence: 0.42, status: 'rejected', reviewer: '张三', submitted_at: '2026-05-17 10:05', reviewed_at: '2026-05-17 10:12' },
+  { entity_id: 'hive.dwd.order_fact', entity_type: 'table', display_name: '订单事实表', confidence: 0.96, status: 'auto_approved', reviewer: '-', submitted_at: '2026-05-16 18:30', reviewed_at: '2026-05-16 18:30' },
+  { entity_id: 'mysql.bi.t_payment.pay_channel', entity_type: 'column', display_name: '支付渠道', confidence: 0.79, status: 'approved', reviewer: '王五', submitted_at: '2026-05-16 16:15', reviewed_at: '2026-05-16 16:22' },
+  { entity_id: 'mysql.bi.t_payment.amount', entity_type: 'column', display_name: '支付金额', confidence: 0.88, status: 'approved', reviewer: '张三', submitted_at: '2026-05-16 15:08', reviewed_at: '2026-05-16 15:15' },
+];
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+function showToast(message, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { success: '&#10003;', info: '&#8505;', warning: '&#9888;' };
+  toast.innerHTML = `<span>${icons[type] || ''}</span> ${message}`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(40px)';
+    toast.style.transition = 'all 250ms ease-out';
+    setTimeout(() => toast.remove(), 250);
+  }, 2500);
+}
+
+/* ================================================================
+   KEYBOARD SHORTCUTS
+   ================================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDialog();
+    closeCompletionPanel();
+  }
+  // Navigation shortcuts: Ctrl+1-4
+  if (e.ctrlKey || e.metaKey) {
+    const pages = ['search', 'review', 'history', 'config'];
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 4) { e.preventDefault(); navigateTo(pages[num - 1]); }
+  }
+});
+
+/* ================================================================
+   INITIALIZATION
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  doSearch();
+  renderReviewTable();
+
+  // History table
+  document.getElementById('history-tbody').innerHTML = mockHistory.map(r => `
+    <tr>
+      <td><span class="mono-text">${r.entity_id}</span></td>
+      <td><span class="entity-badge ${r.entity_type}">${r.entity_type === 'table' ? 'TABLE' : 'COL'}</span></td>
+      <td>${r.display_name}</td>
+      <td><span class="confidence-ring ${r.confidence >= 0.80 ? 'confidence-high' : r.confidence >= 0.60 ? 'confidence-mid' : 'confidence-low'}" style="width:32px;height:32px;font-size:0.7rem;display:inline-flex;">${r.confidence.toFixed(2)}</span></td>
+      <td><span class="status-dot ${r.status}"></span>${statusLabels[r.status]}</td>
+      <td>${r.reviewer}</td>
+      <td style="font-size:0.8rem;color:var(--color-text-tertiary);">${r.submitted_at}</td>
+      <td style="font-size:0.8rem;color:var(--color-text-tertiary);">${r.reviewed_at}</td>
+    </tr>
+  `).join('');
+
+  // Click outside dialog to close
+  document.getElementById('review-dialog').addEventListener('click', function(e) {
+    if (e.target === this) closeDialog();
+  });
+});
+</script>
+
+</body>
+</html>

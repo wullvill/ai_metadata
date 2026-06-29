@@ -1,0 +1,17 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Python, FastAPI, LangChain, LangGraph, Vue 3, TDesign, Vite
+  Vector DB: Milvus, Search: Elasticsearch 8.x
+  LLM: 阿里云百炼 (qwen-plus/qwen-max/deepseek-v3)
+  External system: OpenMetadata (元数据管理平台)
+  Domain: 数据治理 — 智能元数据补全
+  We use conventional commits
+  Code coverage target: >= 80%
+
+rules:
+  proposal:
+    - Keep proposals under 500 words
+    - Always include a "Non-Goals" section
+  tasks:
+    - Break tasks into chunks of max 2 hours

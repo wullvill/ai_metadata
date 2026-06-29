@@ -1,0 +1,1574 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaGraph — 审核工作台</title>
+<style>
+/* ── Design tokens: modern-minimal ── */
+:root {
+  --bg:      oklch(99% 0.002 240);
+  --surface: oklch(100% 0 0);
+  --fg:      oklch(18% 0.012 250);
+  --muted:   oklch(54% 0.012 250);
+  --border:  oklch(92% 0.005 250);
+  --accent:  oklch(58% 0.18 255);
+  --accent-soft: oklch(58% 0.18 255 / 0.08);
+  --success: oklch(62% 0.16 145);
+  --warn:    oklch(72% 0.15 75);
+  --danger:  oklch(52% 0.20 25);
+
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --max-width: 1200px;
+  --nav-height: 56px;
+}
+
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Nav ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: oklch(99% 0.002 240 / 0.82);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  height: var(--nav-height);
+  display: flex; align-items: center;
+}
+.nav-inner {
+  max-width: var(--max-width); width: 100%; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 24px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  letter-spacing: -0.01em; color: var(--fg); text-decoration: none;
+}
+.nav-logo svg { color: var(--accent); }
+.nav-links { display: flex; gap: 4px; margin-left: auto; }
+.nav-link {
+  padding: 6px 14px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; color: var(--muted);
+  text-decoration: none; transition: all 0.15s;
+}
+.nav-link:hover, .nav-link.active { color: var(--fg); background: var(--border); }
+
+/* ── Page header ── */
+.page-header {
+  max-width: var(--max-width); margin: 0 auto; padding: 32px 24px 20px;
+}
+.page-header h1 {
+  font-family: var(--font-display); font-size: 24px; font-weight: 700;
+  letter-spacing: -0.01em; color: var(--fg);
+}
+.page-header .subtitle {
+  font-size: 14px; color: var(--muted); margin-top: 4px;
+}
+
+/* ── Search bar ── */
+.search-section {
+  max-width: var(--max-width); margin: 0 auto; padding: 32px 24px 32px;
+}
+.search-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 8px 10px;
+}
+.search-bar:focus-within { border-color: var(--accent); }
+.search-bar-row { display: flex; gap: 10px; align-items: center; width: 100%; }
+.search-icon { color: var(--muted); flex-shrink: 0; }
+.search-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: 15px; font-family: var(--font-body); color: var(--fg);
+  min-width: 0;
+}
+.search-input::placeholder { color: var(--muted); }
+.filter-bar {
+  display: flex; gap: 8px; align-items: center; width: 100%;
+  overflow-x: auto; padding-top: 2px;
+}
+.filter-select-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.filter-select {
+  appearance: none;
+  padding: 5px 28px 5px 10px;
+  border-radius: 20px; border: 1px solid var(--border);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  background: transparent; color: var(--muted);
+  font-family: var(--font-body);
+  transition: all 0.15s; min-width: 0;
+}
+.filter-select:hover { border-color: var(--accent); color: var(--fg); }
+.filter-select.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.filter-select-wrap::after {
+  content: ''; position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%); pointer-events: none;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+.filter-sep { width: 1px; background: var(--border); margin: 0 4px; align-self: stretch; }
+.filter-group { display: flex; gap: 6px; flex-shrink: 0; }
+.filter-chip {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  background: transparent; color: var(--muted); font-family: var(--font-body);
+  transition: all 0.15s;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--fg); }
+.filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.conf-range-wrap {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.conf-range-label {
+  font-size: 12px; color: var(--muted); white-space: nowrap;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.conf-range-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100px; height: 4px; border-radius: 2px;
+  background: var(--border); outline: none;
+}
+.conf-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px oklch(18% 0.012 250 / 0.15);
+}
+.queue-count {
+  font-size: 13px; color: var(--muted); padding-left: 8px;
+  flex-shrink: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+
+/* ── Ops bar ── */
+.ops-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap; gap: 10px;
+}
+.ops-bar-left { display: flex; align-items: center; gap: 12px; }
+.ops-count { font-size: 13px; color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.ops-bar-right { display: flex; align-items: center; gap: 10px; }
+.ops-selected { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; display: none; }
+.ops-batch-btn {
+  padding: 6px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--muted);
+  font-family: var(--font-body); transition: all 0.15s; white-space: nowrap;
+}
+.ops-batch-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ops-batch-btn.danger { color: var(--danger); border-color: var(--danger); }
+.ops-batch-btn.danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
+.ops-batch-btn:hover:not(:disabled) { opacity: 0.88; }
+.ops-batch-btn:disabled {
+  background: transparent; border-color: var(--border); color: var(--muted); cursor: not-allowed; opacity: 0.5;
+}
+.checkbox-cell { width: 40px; text-align: center; padding: 10px 8px !important; }
+.checkbox-cell input[type="checkbox"] {
+  width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); margin: 0;
+}
+th.checkbox-cell { padding: 12px 8px !important; }
+
+/* ── Table ── */
+.table-section {
+  max-width: var(--max-width); margin: 0 auto; padding: 0 24px 56px;
+}
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.table-scroll { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 14px; font-variant-numeric: tabular-nums;
+}
+thead { border-bottom: 2px solid var(--border); }
+th {
+  text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  white-space: nowrap; cursor: pointer; user-select: none;
+  transition: color 0.15s;
+}
+th:hover { color: var(--fg); }
+th.sorted { color: var(--accent); }
+th .sort-arrow { margin-left: 4px; font-size: 10px; }
+td { padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+tr.row-clickable { cursor: pointer; }
+.cell-name {
+  font-weight: 600; color: var(--accent);
+  font-family: var(--font-mono); font-size: 13px;
+}
+.cell-name:hover { text-decoration: underline; }
+.cell-mono { font-family: var(--font-mono); font-size: 13px; }
+
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 12px; font-weight: 500;
+}
+.tag-blue { background: oklch(58% 0.18 255 / 0.1); color: var(--accent); }
+.tag-green { background: oklch(62% 0.16 145 / 0.1); color: var(--success); }
+.tag-amber { background: oklch(72% 0.15 75 / 0.12); color: oklch(55% 0.13 70); }
+.tag-red { background: oklch(52% 0.20 25 / 0.08); color: var(--danger); }
+.tag-slate { background: oklch(54% 0.012 250 / 0.08); color: var(--muted); }
+
+.conf-cell { display: flex; align-items: center; gap: 8px; }
+.conf-bar {
+  width: 48px; height: 5px; border-radius: 3px;
+  background: var(--border); overflow: hidden; flex-shrink: 0;
+}
+.conf-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.conf-bar-fill.high { background: var(--success); }
+.conf-bar-fill.mid { background: oklch(72% 0.15 75); }
+.conf-bar-fill.low { background: var(--danger); }
+.conf-value { font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
+
+/* ── Empty / Loading / Error ── */
+.empty-state { display: none; text-align: center; padding: 64px 24px; color: var(--muted); }
+.empty-state svg { opacity: 0.3; margin-bottom: 12px; }
+.empty-state p { font-size: 15px; }
+.loading-state { display: none; padding: 48px 24px; text-align: center; }
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, oklch(95% 0.002 240) 50%, var(--border) 75%);
+  background-size: 200% 100%; animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skeleton-row { display: grid; grid-template-columns: 40px 1fr 100px 80px 80px 100px 1fr 140px; gap: 12px; padding: 12px 16px; }
+.skeleton-row .sk { height: 16px; }
+.error-state { display: none; text-align: center; padding: 64px 24px; color: var(--muted); }
+.error-state p { font-size: 15px; margin-bottom: 16px; }
+.error-state .retry-btn {
+  padding: 8px 20px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  font-family: var(--font-body);
+}
+
+/* ── Toast ── */
+.toast-container {
+  position: fixed; top: 72px; right: 24px; z-index: 400;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 12px 20px; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 500; color: #fff;
+  box-shadow: 0 4px 16px oklch(18% 0.012 250 / 0.12);
+  animation: toastIn 0.3s ease-out;
+  max-width: 360px;
+}
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ── Detail modal ── */
+.detail-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: oklch(18% 0.012 250 / 0.3);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.detail-overlay.open { display: flex; }
+.detail-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); width: 100%; max-width: 800px;
+  max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 20px 60px oklch(18% 0.012 250 / 0.12);
+}
+.detail-header {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 20px 28px; display: flex; align-items: center; justify-content: space-between;
+}
+.detail-header h3 { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+.detail-header .detail-type { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 12px; }
+.detail-close {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--muted); transition: all 0.15s;
+}
+.detail-close:hover { color: var(--fg); border-color: var(--fg); }
+
+/* Detail tabs */
+.detail-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  padding: 0 28px; background: var(--bg);
+}
+.detail-tab {
+  padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: none; background: transparent; color: var(--muted);
+  font-family: var(--font-body); border-bottom: 2px solid transparent;
+  transition: all 0.15s; margin-bottom: -1px;
+}
+.detail-tab:hover { color: var(--fg); }
+.detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.detail-body { padding: 24px 28px; }
+.detail-section { margin-bottom: 24px; }
+.detail-section:last-child { margin-bottom: 0; }
+.detail-section-title {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px;
+}
+
+/* Structured detail list */
+.detail-list {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.detail-row-flex {
+  display: flex; padding: 12px 20px; border-bottom: 1px solid var(--border);
+  font-size: 14px; background: var(--surface); align-items: baseline;
+}
+.detail-row-flex:last-child { border-bottom: none; }
+.detail-label-sm { width: 100px; color: var(--muted); flex-shrink: 0; font-size: 13px; }
+.detail-value-sm { flex: 1; font-size: 14px; color: var(--fg); font-weight: 500; }
+
+/* Side-by-side comparison */
+.compare-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.compare-card {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 16px; background: var(--bg);
+}
+.compare-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--muted); }
+.compare-card .field { margin-bottom: 10px; }
+.compare-card .field:last-child { margin-bottom: 0; }
+.compare-card .field-label { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.compare-card .field-value { font-size: 14px; color: var(--fg); }
+.compare-card .field-value input,
+.compare-card .field-value textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; font-family: var(--font-body); color: var(--fg);
+  background: var(--surface); resize: vertical;
+}
+.compare-card .field-value input:focus,
+.compare-card .field-value textarea:focus { outline: none; border-color: var(--accent); }
+
+/* Quality rules */
+.quality-rule {
+  display: flex; align-items: center; gap: 8px; padding: 6px 0;
+  font-size: 13px;
+}
+.quality-rule .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.quality-rule .dot.pass { background: var(--success); }
+.quality-rule .dot.warn { background: var(--warn); }
+.quality-rule .dot.fail { background: var(--danger); }
+
+/* Reference list */
+.ref-item {
+  display: flex; align-items: center; gap: 12px; padding: 8px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.ref-item:last-child { border-bottom: none; }
+.ref-item .ref-name { font-family: var(--font-mono); font-weight: 600; min-width: 120px; }
+.ref-item .ref-desc { color: var(--muted); flex: 1; }
+.ref-item .ref-sim {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  padding: 2px 6px; border-radius: 4px;
+}
+
+/* Columns table in detail */
+.detail-cols-wrap {
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+.detail-cols-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; table-layout: auto;
+}
+.detail-cols-table thead { position: sticky; top: 0; z-index: 1; }
+.detail-cols-table th {
+  background: oklch(97% 0.003 250);
+  padding: 8px 10px; text-align: left;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.detail-cols-table td {
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: top; line-height: 1.5;
+}
+.detail-cols-table tbody tr:last-child td { border-bottom: none; }
+.detail-cols-table tbody tr:hover { background: oklch(58% 0.18 255 / 0.02); }
+.detail-cols-table .col-name {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--fg);
+}
+.detail-cols-table .col-type {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+  background: oklch(54% 0.012 250 / 0.06); padding: 2px 6px; border-radius: 3px;
+  white-space: nowrap;
+}
+.detail-cols-table .cell-desc {
+  font-size: 13px; color: var(--fg); max-width: 180px;
+}
+.detail-cols-table .cell-tags {
+  display: flex; flex-wrap: wrap; gap: 3px; min-width: 80px;
+}
+.detail-cols-table .cell-empty {
+  color: var(--muted); font-style: italic; font-size: 12px;
+}
+.detail-cols-table .cell-time {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap;
+}
+.detail-cols-table input.col-edit {
+  width: 100%; padding: 4px 6px; border: 1px solid var(--border);
+  border-radius: 4px; font-size: 12px; font-family: var(--font-body);
+  color: var(--fg); background: var(--surface);
+}
+.detail-cols-table input.col-edit:focus {
+  outline: none; border-color: var(--accent);
+}
+.col-edit-dirty { border-color: var(--warn) !important; }
+.col-no-columns {
+  text-align: center; padding: 32px 24px; color: var(--muted); font-size: 13px;
+}
+
+/* Detail footer actions */
+.detail-footer {
+  position: sticky; bottom: 0; z-index: 10;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 16px 28px; display: flex; gap: 10px; justify-content: flex-end;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 20px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  border: none; font-family: var(--font-body); transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+
+/* ── Confirm / Reject dialogs ── */
+.dialog-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: oklch(18% 0.012 250 / 0.3);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.dialog-overlay.open { display: flex; }
+.dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); width: 100%; max-width: 440px;
+  padding: 28px;
+  box-shadow: 0 20px 60px oklch(18% 0.012 250 / 0.12);
+}
+.dialog h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.dialog p { font-size: 14px; line-height: 1.6; margin-bottom: 20px; color: var(--muted); }
+.dialog textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font-body);
+  color: var(--fg); background: var(--bg); resize: vertical; min-height: 80px;
+  margin-bottom: 8px;
+}
+.dialog textarea:focus { outline: none; border-color: var(--accent); }
+.dialog .field-error { font-size: 12px; color: var(--danger); margin-bottom: 12px; display: none; }
+.dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ── Progress bar ── */
+.progress-overlay {
+  position: fixed; inset: 0; z-index: 350;
+  background: oklch(18% 0.012 250 / 0.3);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.progress-overlay.open { display: flex; }
+.progress-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); width: 100%; max-width: 380px;
+  padding: 32px; text-align: center;
+  box-shadow: 0 20px 60px oklch(18% 0.012 250 / 0.12);
+}
+.progress-card p { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.progress-bar-wrap {
+  height: 6px; border-radius: 3px; background: var(--border);
+  overflow: hidden; margin-bottom: 8px;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 3px; background: var(--accent);
+  transition: width 0.3s;
+}
+.progress-card .progress-text { font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
+
+/* ── Footer ── */
+.footer {
+  border-top: 1px solid var(--border); padding: 24px;
+  text-align: center; font-size: 13px; color: var(--muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-inner { padding: 0 16px; }
+  .page-header { padding: 24px 16px 16px; }
+  .search-section { padding: 0 16px 24px; }
+  .filter-bar { flex-wrap: wrap; gap: 6px; }
+  .filter-sep { display: none; }
+  .queue-count { display: none; }
+  .table-section { padding: 0 16px 40px; }
+  .ops-bar { flex-direction: column; align-items: flex-start; }
+  .ops-bar-right { width: 100%; justify-content: space-between; }
+  .detail-panel { max-width: 100%; max-height: 90vh; border-radius: var(--radius-md); }
+  .detail-header { padding: 16px 20px; }
+  .detail-body { padding: 16px 20px; }
+  .detail-footer { padding: 12px 20px; flex-wrap: wrap; }
+  .compare-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .detail-tabs { padding: 0 12px; overflow-x: auto; }
+  .detail-tab { padding: 8px 12px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="meta_search.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="11" width="7" height="10" rx="1"/></svg>
+      MetaGraph
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="meta_search.html">资产目录</a>
+      <a class="nav-link active" href="review.html">审核工作台</a>
+      <a class="nav-link" href="#">补全溯源</a>
+      <a class="nav-link" href="#">参数配置</a>
+    </div>
+  </div>
+</nav>
+<!-- Search -->
+<section class="search-section">
+  <div class="search-bar">
+    <div class="search-bar-row">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" id="searchInput" type="text" placeholder="搜索资产名称、描述、标签…" autocomplete="off">
+      <span class="queue-count" id="queueCount">—</span>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="statusFilter" onchange="setStatusFilter(this.value)">
+          <option value="all">全部状态</option>
+          <option value="pending_review" selected>待审核</option>
+          <option value="approved">已确认</option>
+          <option value="rejected">已驳回</option>
+        </select>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="systemFilter" onchange="setSystemFilter(this.value)">
+          <option value="all">全部系统</option>
+        </select>
+      </div>
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="dbFilter" onchange="setDbFilter(this.value)">
+          <option value="all">全部库</option>
+        </select>
+      </div>
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="schemaFilter" onchange="setSchemaFilter(this.value)">
+          <option value="all">全部Schema</option>
+        </select>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-group" id="typeFilters"></div>
+      <div class="filter-sep"></div>
+      <div class="conf-range-wrap">
+        <span class="conf-range-label">置信度 ≥ <span id="confMinLabel">0</span></span>
+        <input type="range" class="conf-range-slider" id="confRange" min="0" max="100" value="0" oninput="setConfMin(this.value)">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ops bar -->
+<section class="table-section" style="padding-bottom:12px">
+  <div class="ops-bar" id="opsBar">
+    <div class="ops-bar-left">
+      <span class="ops-count" id="opsCount">—</span>
+    </div>
+    <div class="ops-bar-right">
+      <span class="ops-selected" id="selectedCount">已选 0 项</span>
+      <button class="ops-batch-btn primary" id="batchApproveBtn" disabled onclick="batchApprove()">批量确认</button>
+      <button class="ops-batch-btn danger" id="batchRejectBtn" disabled onclick="batchReject()">批量驳回</button>
+    </div>
+  </div>
+</section>
+
+<!-- Table -->
+<section class="table-section">
+  <div class="table-wrap">
+    <div class="loading-state" id="loadingState">
+      <div class="skeleton-row"><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div></div>
+      <div class="skeleton-row"><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div></div>
+      <div class="skeleton-row"><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div><div class="sk skeleton"></div></div>
+    </div>
+    <div class="table-scroll">
+      <table id="reviewTable">
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)"></th>
+            <th data-sort="entity_name">资产名称 <span class="sort-arrow"></span></th>
+            <th data-sort="entity_type">类型</th>
+            <th data-sort="database">所属库</th>
+            <th data-sort="schema">Schema</th>
+            <th data-sort="system">所属系统</th>
+            <th data-sort="confidence">置信度 <span class="sort-arrow"></span></th>
+            <th data-sort="review_status">审核状态</th>
+            <th data-sort="submitted_at">提交时间 <span class="sort-arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p id="emptyText">暂无待审核记录</p>
+    </div>
+    <div class="error-state" id="errorState">
+      <p>加载失败，请稍后重试</p>
+      <button class="retry-btn" onclick="loadQueue()">重试</button>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  MetaGraph · 数仓元数据管理平台 · 演示版本
+</footer>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Detail modal -->
+<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="dialog-overlay" id="confirmOverlay" onclick="if(event.target===this)closeConfirm()">
+  <div class="dialog">
+    <h4>确认采纳补全建议</h4>
+    <p id="confirmMessage">确认采纳此 AI 补全建议？将回写至 OpenMetadata。</p>
+    <div class="dialog-actions">
+      <button class="btn btn-secondary" onclick="closeConfirm()">取消</button>
+      <button class="btn btn-primary" onclick="doApprove()">确认采纳</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reject dialog -->
+<div class="dialog-overlay" id="rejectOverlay" onclick="if(event.target===this)closeReject()">
+  <div class="dialog">
+    <h4>驳回补全建议</h4>
+    <p>请填写驳回原因（必填）：</p>
+    <textarea id="rejectReason" placeholder="请说明驳回原因，例如：业务语义不符、中文名不准确、描述与实际用途不一致…"></textarea>
+    <p class="field-error" id="rejectError">请填写驳回原因</p>
+    <div class="dialog-actions">
+      <button class="btn btn-secondary" onclick="closeReject()">取消</button>
+      <button class="btn btn-danger" onclick="doReject()">确认驳回</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch confirm dialog -->
+<div class="dialog-overlay" id="batchConfirmOverlay" onclick="if(event.target===this)closeBatchConfirm()">
+  <div class="dialog">
+    <h4>批量确认</h4>
+    <p id="batchConfirmMessage">确认批量采纳这些补全建议？</p>
+    <div class="dialog-actions">
+      <button class="btn btn-secondary" onclick="closeBatchConfirm()">取消</button>
+      <button class="btn btn-primary" onclick="doBatchApprove()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch reject dialog -->
+<div class="dialog-overlay" id="batchRejectOverlay" onclick="if(event.target===this)closeBatchReject()">
+  <div class="dialog">
+    <h4>批量驳回</h4>
+    <p>请填写驳回原因（必填）：</p>
+    <textarea id="batchRejectReason" placeholder="请说明驳回原因…"></textarea>
+    <p class="field-error" id="batchRejectError">请填写驳回原因</p>
+    <div class="dialog-actions">
+      <button class="btn btn-secondary" onclick="closeBatchReject()">取消</button>
+      <button class="btn btn-danger" onclick="doBatchReject()">确认驳回</button>
+    </div>
+  </div>
+</div>
+
+<!-- Progress overlay -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-card">
+    <p id="progressTitle">处理中…</p>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+    <p class="progress-text" id="progressText">0 / 0</p>
+  </div>
+</div>
+
+<script>
+/* ── Review queue data (synthetic mock data) ── */
+const REVIEW_QUEUE = [
+  {
+    review_id: "rev_001", entity_id: "fact_trade", entity_name: "fact_trade",
+    entity_type: "表", system: "交易系统", database: "ods_trade", schema: "public",
+    original: { display_name: "交易事实表", description: "记录交易流水的基础事实表" },
+    suggestions: { display_name: "交易流水事实表", description: "逐笔交易流水事实表，含成交价格、数量、方向、交易对手等核心字段，按交易日分区", tags: ["交易", "核心", "分区表", "流水"], confidence: 0.92 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "长度适中（7字）" }, { name: "描述覆盖率", status: "pass", detail: "覆盖核心字段信息" }, { name: "标签相关性", status: "pass", detail: "标签与资产内容相关" }, { name: "命名规范", status: "warn", detail: "建议统一使用「事实表」后缀" }], summary: "3 通过 / 1 提醒" },
+    references: [{ name: "fact_order", display_name: "订单事实表", similarity: 0.87 }, { name: "fact_payment", display_name: "支付事实表", similarity: 0.82 }, { name: "fact_settlement", display_name: "结算流水表", similarity: 0.79 }],
+    columns: [
+      {name:"trade_id",type:"bigint",origDesc:"交易唯一标识，主键",origTag:"主键",compDesc:"交易ID，作为事实表主键，关联订单表与成交表，全局唯一",compTag:"主键,核心",compTime:"2026-05-18 08:30"},
+      {name:"product_code",type:"varchar(32)",origDesc:"产品代码",origTag:"维度",compDesc:"金融产品代码，关联dim_product.product_code，标识交易标的",compTag:"维度,外键",compTime:"2026-05-18 08:30"},
+      {name:"trade_date",type:"date",origDesc:"交易日期",origTag:"分区",compDesc:"交易发生日期，作为分区键，格式yyyy-MM-dd",compTag:"分区,日期",compTime:"2026-05-18 08:30"},
+      {name:"amount",type:"decimal(18,4)",origDesc:"成交金额",origTag:"指标",compDesc:"成交金额，以交易币种计价，含手续费",compTag:"指标,金额,核心",compTime:"2026-05-18 08:30"},
+      {name:"price",type:"decimal(18,6)",origDesc:"成交价格",origTag:"指标",compDesc:"单位成交价格，保留6位小数精度",compTag:"指标,价格",compTime:"2026-05-18 08:30"},
+      {name:"quantity",type:"decimal(18,2)",origDesc:"成交数量",origTag:"指标",compDesc:"成交数量（股/张/份），单位为产品基础单位",compTag:"指标,数量",compTime:"2026-05-18 08:30"},
+      {name:"direction",type:"varchar(4)",origDesc:"买卖方向",origTag:"维度",compDesc:"交易方向，B=买入 S=卖出",compTag:"维度,枚举",compTime:"2026-05-18 08:30"},
+      {name:"counterparty_id",type:"bigint",origDesc:"对手方ID",origTag:"维度",compDesc:"交易对手方标识，关联dim_counterparty.counterparty_id",compTag:"维度,外键",compTime:"2026-05-18 08:30"},
+      {name:"settle_date",type:"date",origDesc:"交收日期",origTag:"",compDesc:"资金交收日期，通常为T+1或T+2",compTag:"日期",compTime:"2026-05-18 08:30"},
+      {name:"trade_status",type:"varchar(16)",origDesc:"交易状态",origTag:"",compDesc:"交易生命周期状态：NEW/CONFIRMED/SETTLED/CANCELLED",compTag:"状态,枚举",compTime:"2026-05-18 08:30"},
+      {name:"created_at",type:"timestamp",origDesc:"创建时间",origTag:"",compDesc:"记录创建时间戳，系统自动生成",compTag:"审计",compTime:"2026-05-18 08:30"},
+      {name:"updated_at",type:"timestamp",origDesc:"更新时间",origTag:"",compDesc:"记录最后更新时间戳，系统自动维护",compTag:"审计",compTime:"2026-05-18 08:30"}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 09:15", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_002", entity_id: "dim_counterparty", entity_name: "dim_counterparty",
+    entity_type: "表", system: "主数据系统", database: "dwd_master", schema: "md",
+    original: { display_name: "对手方维度表", description: "交易对手方信息" },
+    suggestions: { display_name: "交易对手方维度表", description: "交易对手方维度表，记录机构名称、法人实体ID、信用评级、关联关系等核心属性", tags: ["客户", "对手方", "维度", "主数据"], confidence: 0.78 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "中文名准确描述资产内容" }, { name: "描述覆盖率", status: "warn", detail: "建议补充对手方分类维度说明" }, { name: "标签相关性", status: "pass", detail: "标签覆盖业务域和数据类型" }], summary: "2 通过 / 1 提醒" },
+    references: [{ name: "dim_account", display_name: "账户维度表", similarity: 0.84 }, { name: "dim_org", display_name: "组织机构维度表", similarity: 0.76 }],
+    columns: [
+      {name:"counterparty_id",type:"bigint",origDesc:"对手方ID",origTag:"主键",compDesc:"交易对手方唯一标识",compTag:"主键",compTime:"2026-05-17 18:20"},
+      {name:"legal_name",type:"varchar(256)",origDesc:"法人全称",origTag:"",compDesc:"工商登记法人全称，用于合规与合同签署",compTag:"合规",compTime:"2026-05-17 18:20"},
+      {name:"lei",type:"varchar(20)",origDesc:"法人实体标识符",origTag:"",compDesc:"Legal Entity Identifier，全球法人识别编码",compTag:"合规,标识",compTime:"2026-05-17 18:20"},
+      {name:"credit_rating",type:"varchar(8)",origDesc:"信用评级",origTag:"维度",compDesc:"内部信用评级 AAA/AA/A/BBB/BB",compTag:"维度,风控",compTime:"2026-05-17 18:20"},
+      {name:"country",type:"varchar(3)",origDesc:"注册国家",origTag:"",compDesc:"ISO 3166-1 alpha-3 国家代码",compTag:"维度",compTime:"2026-05-17 18:20"},
+      {name:"parent_id",type:"bigint",origDesc:"母公司ID",origTag:"",compDesc:"母公司对手方ID，自引用外键，构建集团关系树",compTag:"外键,层级",compTime:"2026-05-17 18:20"},
+      {name:"status",type:"varchar(8)",origDesc:"状态",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 08:42", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_003", entity_id: "dim_product", entity_name: "dim_product",
+    entity_type: "表", system: "主数据系统", database: "dwd_master", schema: "md",
+    original: { display_name: "产品维度表", description: "金融产品基础信息" },
+    suggestions: { display_name: "金融产品维度表", description: "金融产品维度表，含产品代码、类型、发行人、到期日、利率等核心属性，支持多层级产品分类", tags: ["产品", "维度", "金融"], confidence: 0.85 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "加入「金融」限定词更准确" }, { name: "描述覆盖率", status: "pass", detail: "描述含核心字段及产品层级说明" }, { name: "标签相关性", status: "pass", detail: "标签准确覆盖业务域" }], summary: "3 通过 / 0 提醒" },
+    references: [{ name: "dim_account", display_name: "账户维度表", similarity: 0.71 }, { name: "dim_rating", display_name: "信用评级维度表", similarity: 0.68 }],
+    columns: [
+      {name:"product_code",type:"varchar(32)",origDesc:"产品代码",origTag:"主键",compDesc:"",compTag:"",compTime:""},
+      {name:"product_type",type:"varchar(16)",origDesc:"产品类型",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"issuer",type:"varchar(128)",origDesc:"发行人",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"maturity_date",type:"date",origDesc:"到期日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"coupon_rate",type:"decimal(8,6)",origDesc:"票面利率",origTag:"指标",compDesc:"",compTag:"",compTime:""},
+      {name:"isin",type:"varchar(12)",origDesc:"ISIN代码",origTag:"标识",compDesc:"",compTag:"",compTime:""},
+      {name:"status",type:"varchar(8)",origDesc:"产品状态",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 08:30", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_004", entity_id: "dim_calendar", entity_name: "dim_calendar",
+    entity_type: "表", system: "公共系统", database: "dwd_common", schema: "md",
+    original: { display_name: "日历维度表", description: "交易日历" },
+    suggestions: { display_name: "交易日历维度表", description: "交易日历维度表，标注交易日、节假日、结算日、交割日等日期属性，支持多市场日历差异化配置", tags: ["公共", "日历", "维度", "交易日"], confidence: 0.65 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "加入「交易」限定词" }, { name: "描述覆盖率", status: "warn", detail: "建议补充多市场日历来源说明" }, { name: "标签相关性", status: "warn", detail: "「交易日」标签与「日历」存在语义重叠" }], summary: "1 通过 / 2 提醒" },
+    references: [{ name: "dim_date", display_name: "日期维度表", similarity: 0.91 }, { name: "dim_time", display_name: "时间维度表", similarity: 0.74 }],
+    columns: [
+      {name:"cal_date",type:"date",origDesc:"日历日期",origTag:"主键",compDesc:"",compTag:"",compTime:""},
+      {name:"is_trading_day",type:"boolean",origDesc:"是否交易日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"is_holiday",type:"boolean",origDesc:"是否节假日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"is_settle_day",type:"boolean",origDesc:"是否结算日",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"market_code",type:"varchar(8)",origDesc:"市场代码",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"holiday_name",type:"varchar(64)",origDesc:"节假日名称",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-23 17:20", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_005", entity_id: "dim_org", entity_name: "dim_org",
+    entity_type: "表", system: "主数据系统", database: "dwd_master", schema: "md",
+    original: { display_name: "组织维度表", description: "组织机构层级关系" },
+    suggestions: { display_name: "组织机构维度表", description: "组织机构维度表，记录部门、团队、成本中心、法人实体间层级关系，支持组织变更历史追溯", tags: ["公共", "组织", "维度", "层级"], confidence: 0.71 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "中文名准确反映资产内容" }, { name: "描述覆盖率", status: "pass", detail: "描述覆盖层级关系和变更追溯" }, { name: "标签相关性", status: "pass", detail: "标签合理" }], summary: "3 通过 / 0 提醒" },
+    references: [{ name: "dim_dept", display_name: "部门维度表", similarity: 0.88 }, { name: "dim_company", display_name: "公司维度表", similarity: 0.73 }],
+    columns: [
+      {name:"org_id",type:"bigint",origDesc:"机构ID",origTag:"主键",compDesc:"组织机构唯一标识",compTag:"主键",compTime:"2026-05-17 09:30"},
+      {name:"org_name",type:"varchar(128)",origDesc:"机构名称",origTag:"",compDesc:"组织机构全称",compTag:"",compTime:"2026-05-17 09:30"},
+      {name:"org_type",type:"varchar(16)",origDesc:"机构类型",origTag:"维度",compDesc:"DEPT/TEAM/COST_CENTER/LEGAL_ENTITY",compTag:"维度,枚举",compTime:"2026-05-17 09:30"},
+      {name:"parent_org_id",type:"bigint",origDesc:"上级机构ID",origTag:"外键",compDesc:"",compTag:"",compTime:""},
+      {name:"level",type:"int",origDesc:"层级",origTag:"",compDesc:"组织层级深度，根节点为1",compTag:"",compTime:"2026-05-17 09:30"},
+      {name:"status",type:"varchar(8)",origDesc:"状态",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-23 16:55", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_006", entity_id: "col_trade_amount", entity_name: "trade_amount",
+    entity_type: "字段", system: "交易系统", database: "ods_trade", schema: "public",
+    original: { display_name: "成交金额", description: "交易金额 — fact_trade.amount" },
+    suggestions: { display_name: "成交金额", description: "成交金额 — fact_trade.amount，decimal(18,4)，以交易币种计价，不含手续费和税费", tags: ["交易", "字段", "金额", "核心"], confidence: 0.88 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "中文名与已有命名保持一致" }, { name: "描述覆盖率", status: "pass", detail: "含数据类型、精度和计价说明" }, { name: "标签相关性", status: "pass", detail: "标签准确" }], summary: "3 通过 / 0 提醒" },
+    references: [{ name: "trade_quantity", display_name: "成交数量", similarity: 0.89 }, { name: "trade_price", display_name: "成交价格", similarity: 0.85 }],
+    review_status: "pending_review", submitted_at: "2026-05-24 09:00", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_007", entity_id: "col_settle_date", entity_name: "settlement_date",
+    entity_type: "字段", system: "清算系统", database: "ods_settle", schema: "public",
+    original: { display_name: "结算日期", description: "交收日期 — fact_settlement.settle_date" },
+    suggestions: { display_name: "交收日期", description: "交收日期 — fact_settlement.settle_date，date 类型，T+1/T+2 根据产品类型确定，非交易日顺延", tags: ["清算", "字段", "日期", "交收"], confidence: 0.73 },
+    quality: { rules: [{ name: "中文名完整性", status: "warn", detail: "「交收日期」vs「结算日期」需确认业务术语" }, { name: "描述覆盖率", status: "pass", detail: "描述含 T+N 规则" }, { name: "标签相关性", status: "pass", detail: "标签覆盖业务域" }], summary: "2 通过 / 1 提醒" },
+    references: [{ name: "trade_date", display_name: "交易日期", similarity: 0.83 }, { name: "settle_status", display_name: "结算状态", similarity: 0.77 }],
+    review_status: "pending_review", submitted_at: "2026-05-24 07:30", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_008", entity_id: "fact_position", entity_name: "fact_position",
+    entity_type: "表", system: "交易系统", database: "dwd_position", schema: "pos",
+    original: { display_name: "持仓事实表", description: "持仓快照数据" },
+    suggestions: { display_name: "持仓快照事实表", description: "持仓快照事实表，记录各账户每日持仓数量、成本、市值、浮动盈亏，按持仓日期分区", tags: ["交易", "持仓", "核心", "快照"], confidence: 0.81 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "加入「快照」更精确" }, { name: "描述覆盖率", status: "pass", detail: "描述含成本和盈亏指标" }, { name: "标签相关性", status: "pass", detail: "标签准确" }], summary: "3 通过 / 0 提醒" },
+    references: [{ name: "fact_holding", display_name: "持仓快照表", similarity: 0.92 }, { name: "fact_balance", display_name: "余额事实表", similarity: 0.78 }],
+    columns: [
+      {name:"position_id",type:"bigint",origDesc:"持仓记录ID",origTag:"主键",compDesc:"持仓记录唯一标识",compTag:"主键",compTime:"2026-05-18 08:45"},
+      {name:"account_id",type:"bigint",origDesc:"账户ID",origTag:"外键",compDesc:"关联dim_account.account_id",compTag:"外键,维度",compTime:"2026-05-18 08:45"},
+      {name:"product_code",type:"varchar(32)",origDesc:"产品代码",origTag:"外键",compDesc:"",compTag:"",compTime:""},
+      {name:"position_date",type:"date",origDesc:"持仓日期",origTag:"分区",compDesc:"持仓快照日期",compTag:"分区,日期",compTime:"2026-05-18 08:45"},
+      {name:"quantity",type:"decimal(18,2)",origDesc:"持仓数量",origTag:"指标",compDesc:"当日持仓数量（正=多头，负=空头）",compTag:"指标,数量",compTime:"2026-05-18 08:45"},
+      {name:"cost_price",type:"decimal(18,6)",origDesc:"成本价",origTag:"指标",compDesc:"加权平均成本价格",compTag:"指标,价格",compTime:"2026-05-18 08:45"},
+      {name:"market_value",type:"decimal(18,4)",origDesc:"市值",origTag:"指标",compDesc:"当日收盘市值 = 持仓数量 × 收盘价",compTag:"指标,金额",compTime:"2026-05-18 08:45"},
+      {name:"unrealized_pnl",type:"decimal(18,4)",origDesc:"浮动盈亏",origTag:"指标",compDesc:"未实现盈亏 = 市值 - 成本",compTag:"指标,盈亏",compTime:"2026-05-18 08:45"}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 06:45", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_009", entity_id: "dim_rating", entity_name: "dim_rating",
+    entity_type: "表", system: "主数据系统", database: "dwd_master", schema: "md",
+    original: { display_name: "评级维度表", description: "信用评级信息" },
+    suggestions: { display_name: "信用评级维度表", description: "信用评级维度表，记录外部评级（S&P/Moody's/Fitch）与内部评级映射，含评级日期、展望等属性", tags: ["风控", "评级", "维度", "信用"], confidence: 0.69 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "加入「信用」限定词" }, { name: "描述覆盖率", status: "pass", detail: "含三大外部评级机构映射" }, { name: "标签相关性", status: "warn", detail: "建议添加「外部评级」标签区分内外部" }], summary: "2 通过 / 1 提醒" },
+    references: [{ name: "dim_credit_score", display_name: "信用评分维度表", similarity: 0.85 }, { name: "dim_risk_level", display_name: "风险等级维度表", similarity: 0.72 }],
+    columns: [
+      {name:"rating_id",type:"bigint",origDesc:"评级记录ID",origTag:"主键",compDesc:"",compTag:"",compTime:""},
+      {name:"entity_type",type:"varchar(16)",origDesc:"实体类型",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"entity_id",type:"bigint",origDesc:"实体ID",origTag:"外键",compDesc:"",compTag:"",compTime:""},
+      {name:"sp_rating",type:"varchar(8)",origDesc:"标普评级",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"moodys_rating",type:"varchar(8)",origDesc:"穆迪评级",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"fitch_rating",type:"varchar(8)",origDesc:"惠誉评级",origTag:"",compDesc:"",compTag:"",compTime:""},
+      {name:"internal_rating",type:"varchar(8)",origDesc:"内部评级",origTag:"维度",compDesc:"",compTag:"",compTime:""},
+      {name:"rating_date",type:"date",origDesc:"评级日期",origTag:"",compDesc:"",compTag:"",compTime:""}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-23 15:40", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_010", entity_id: "vw_trade_summary", entity_name: "vw_trade_summary",
+    entity_type: "视图", system: "交易系统", database: "dws_agg", schema: "agg",
+    original: { display_name: "交易汇总视图", description: "当日交易汇总" },
+    suggestions: { display_name: "当日交易汇总视图", description: "当日交易汇总视图，按产品类型、交易方向聚合成交金额与笔数，支持实时更新", tags: ["交易", "汇总", "视图", "实时"], confidence: 0.94 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "加入「当日」时间限定" }, { name: "描述覆盖率", status: "pass", detail: "描述清晰说明聚合维度和实时性" }, { name: "标签相关性", status: "pass", detail: "标签准确" }], summary: "3 通过 / 0 提醒" },
+    references: [{ name: "vw_daily_pnl", display_name: "每日盈亏视图", similarity: 0.81 }, { name: "vw_order_summary", display_name: "订单汇总视图", similarity: 0.86 }],
+    columns: [
+      {name:"product_type",type:"varchar(16)",origDesc:"产品类型",origTag:"维度",compDesc:"产品类型分组，来源于dim_product",compTag:"维度",compTime:"2026-05-18 08:00"},
+      {name:"direction",type:"varchar(4)",origDesc:"交易方向",origTag:"维度",compDesc:"B=买入汇总 S=卖出汇总",compTag:"维度,枚举",compTime:"2026-05-18 08:00"},
+      {name:"trade_count",type:"bigint",origDesc:"成交笔数",origTag:"指标",compDesc:"当日该分组下的累计成交笔数",compTag:"指标,汇总",compTime:"2026-05-18 08:00"},
+      {name:"total_amount",type:"decimal(20,4)",origDesc:"成交金额合计",origTag:"指标",compDesc:"当日该分组下的累计成交金额",compTag:"指标,金额,汇总",compTime:"2026-05-18 08:00"},
+      {name:"avg_price",type:"decimal(18,6)",origDesc:"均价",origTag:"指标",compDesc:"当日该分组下的成交量加权平均价",compTag:"指标,价格",compTime:"2026-05-18 08:00"}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 09:30", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_011", entity_id: "fact_market_data", entity_name: "fact_market_data",
+    entity_type: "表", system: "行情系统", database: "ods_market", schema: "public",
+    original: { display_name: "行情数据表", description: "市场行情快照" },
+    suggestions: { display_name: "市场行情快照事实表", description: "市场行情快照表，按分钟采集股票、债券、外汇的实时价格与指标数据，含开盘价、最高价、最低价、收盘价、成交量", tags: ["行情", "市场", "实时", "快照"], confidence: 0.76 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "补充「事实表」后缀" }, { name: "描述覆盖率", status: "pass", detail: "含 OHLCV 指标说明" }, { name: "标签相关性", status: "warn", detail: "建议添加「OHLCV」技术标签" }], summary: "2 通过 / 1 提醒" },
+    references: [{ name: "fact_tick_data", display_name: "逐笔行情事实表", similarity: 0.88 }, { name: "vw_market_snapshot", display_name: "行情快照视图", similarity: 0.83 }],
+    columns: [
+      {name:"ticker",type:"varchar(16)",origDesc:"证券代码",origTag:"维度",compDesc:"交易所挂牌证券代码，如600000.SH",compTag:"维度,核心",compTime:"2026-05-18 09:00"},
+      {name:"snap_time",type:"timestamp",origDesc:"行情时间",origTag:"分区",compDesc:"行情快照时间戳，精确到分钟",compTag:"分区,时间",compTime:"2026-05-18 09:00"},
+      {name:"last_price",type:"decimal(18,6)",origDesc:"最新价",origTag:"指标",compDesc:"最新成交价格",compTag:"指标,价格",compTime:"2026-05-18 09:00"},
+      {name:"bid_price",type:"decimal(18,6)",origDesc:"买一价",origTag:"指标",compDesc:"最优买价（买一）",compTag:"指标",compTime:"2026-05-18 09:00"},
+      {name:"ask_price",type:"decimal(18,6)",origDesc:"卖一价",origTag:"指标",compDesc:"最优卖价（卖一）",compTag:"指标",compTime:"2026-05-18 09:00"},
+      {name:"volume",type:"bigint",origDesc:"成交量",origTag:"指标",compDesc:"当日累计成交量",compTag:"指标,数量",compTime:"2026-05-18 09:00"},
+      {name:"turnover",type:"decimal(20,2)",origDesc:"成交额",origTag:"指标",compDesc:"当日累计成交金额",compTag:"指标,金额",compTime:"2026-05-18 09:00"},
+      {name:"open_interest",type:"bigint",origDesc:"持仓量",origTag:"指标",compDesc:"未平仓合约数量（期货/期权适用）",compTag:"指标",compTime:"2026-05-18 09:00"}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 05:20", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_012", entity_id: "vw_risk_dashboard", entity_name: "vw_risk_dashboard",
+    entity_type: "视图", system: "风控系统", database: "dws_agg", schema: "agg",
+    original: { display_name: "风控大屏视图", description: "风控关键指标聚合" },
+    suggestions: { display_name: "风控大屏视图", description: "风控大屏视图，聚合当日 VaR、压力损失、集中度等关键风险指标，支持多维度下钻分析", tags: ["风控", "大屏", "视图", "VaR"], confidence: 0.83 },
+    quality: { rules: [{ name: "中文名完整性", status: "pass", detail: "保持与业务术语一致" }, { name: "描述覆盖率", status: "pass", detail: "含核心指标及下钻能力" }, { name: "标签相关性", status: "pass", detail: "标签覆盖风险类型" }], summary: "3 通过 / 0 提醒" },
+    references: [{ name: "vw_risk_report", display_name: "风控报表视图", similarity: 0.86 }, { name: "vw_compliance_dashboard", display_name: "合规大屏视图", similarity: 0.74 }],
+    columns: [
+      {name:"portfolio_id",type:"varchar(32)",origDesc:"组合ID",origTag:"维度",compDesc:"投资组合标识",compTag:"维度",compTime:"2026-05-18 07:30"},
+      {name:"var_1d_95",type:"decimal(16,4)",origDesc:"1日95%VaR",origTag:"指标",compDesc:"1天持有期、95%置信度的在险价值",compTag:"指标,VaR",compTime:"2026-05-18 07:30"},
+      {name:"stress_loss",type:"decimal(16,4)",origDesc:"压力损失",origTag:"指标",compDesc:"极端情景下的最大潜在损失",compTag:"指标",compTime:"2026-05-18 07:30"},
+      {name:"concentration_ratio",type:"decimal(8,4)",origDesc:"集中度",origTag:"指标",compDesc:"前五大持仓占比",compTag:"指标,风控",compTime:"2026-05-18 07:30"},
+      {name:"liquidity_ratio",type:"decimal(8,4)",origDesc:"流动性比率",origTag:"指标",compDesc:"流动资产/总资产",compTag:"指标",compTime:"2026-05-18 07:30"},
+      {name:"as_of_date",type:"date",origDesc:"数据日期",origTag:"",compDesc:"风险指标计量日期",compTag:"日期",compTime:"2026-05-18 07:30"}
+    ],
+    review_status: "pending_review", submitted_at: "2026-05-24 08:10", submitted_by: "AI 补全引擎"
+  },
+  /* Approved / rejected samples for filter testing */
+  {
+    review_id: "rev_013", entity_id: "fact_risk_metric", entity_name: "fact_risk_metric",
+    entity_type: "表", system: "风控系统", database: "dwd_risk", schema: "risk",
+    original: { display_name: "风险指标表", description: "风控核心度量" },
+    suggestions: { display_name: "风险指标事实表", description: "风险指标事实表，包含VaR、希腊字母、压力测试结果等风控核心度量", tags: ["风控", "VaR", "核心"], confidence: 0.91 },
+    quality: { rules: [], summary: "2 通过" },
+    references: [],
+    columns: [
+      {name:"risk_id",type:"bigint",origDesc:"风险记录ID",origTag:"主键",compDesc:"风险指标记录唯一标识",compTag:"主键",compTime:"2026-05-18 06:45"},
+      {name:"portfolio_id",type:"varchar(32)",origDesc:"组合ID",origTag:"维度",compDesc:"投资组合标识，关联组合主数据",compTag:"维度,外键",compTime:"2026-05-18 06:45"},
+      {name:"as_of_date",type:"date",origDesc:"风险日期",origTag:"分区",compDesc:"风险计量日期",compTag:"分区,日期",compTime:"2026-05-18 06:45"},
+      {name:"var_1d_95",type:"decimal(16,4)",origDesc:"1日95%VaR",origTag:"指标",compDesc:"1天持有期、95%置信度的在险价值",compTag:"指标,VaR,核心",compTime:"2026-05-18 06:45"},
+      {name:"var_1d_99",type:"decimal(16,4)",origDesc:"1日99%VaR",origTag:"指标",compDesc:"1天持有期、99%置信度的在险价值",compTag:"指标,VaR",compTime:"2026-05-18 06:45"},
+      {name:"expected_shortfall",type:"decimal(16,4)",origDesc:"预期亏损",origTag:"指标",compDesc:"条件在险价值（CVaR/ES），超过VaR的平均损失",compTag:"指标,ES",compTime:"2026-05-18 06:45"},
+      {name:"delta",type:"decimal(14,6)",origDesc:"Delta",origTag:"指标",compDesc:"一阶希腊字母，标的资产价格敏感度",compTag:"指标,希腊字母",compTime:"2026-05-18 06:45"},
+      {name:"gamma",type:"decimal(14,6)",origDesc:"Gamma",origTag:"指标",compDesc:"二阶希腊字母，Delta变化率",compTag:"指标,希腊字母",compTime:"2026-05-18 06:45"},
+      {name:"stress_loss",type:"decimal(16,4)",origDesc:"压力损失",origTag:"",compDesc:"极端情景下的最大潜在损失",compTag:"指标,压力测试",compTime:"2026-05-18 06:45"}
+    ],
+    review_status: "approved", submitted_at: "2026-05-23 10:30", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_014", entity_id: "fact_compliance", entity_name: "fact_compliance",
+    entity_type: "表", system: "合规系统", database: "dwd_comply", schema: "comply",
+    original: { display_name: "合规检查表", description: "反洗钱筛查记录" },
+    suggestions: { display_name: "合规检查事实表", description: "合规检查事实表，记录每笔交易的反洗钱筛查、内幕交易标记、合规规则命中结果", tags: ["合规", "AML", "监管"], confidence: 0.87 },
+    quality: { rules: [], summary: "2 通过" },
+    references: [],
+    columns: [
+      {name:"check_id",type:"bigint",origDesc:"检查记录ID",origTag:"主键",compDesc:"合规检查记录唯一标识",compTag:"主键",compTime:"2026-05-18 05:50"},
+      {name:"trade_id",type:"bigint",origDesc:"关联交易ID",origTag:"外键",compDesc:"被检查的原始交易ID",compTag:"外键",compTime:"2026-05-18 05:50"},
+      {name:"check_type",type:"varchar(16)",origDesc:"检查类型",origTag:"维度",compDesc:"AML/SANCTION/INSIDER/MARKET_MANIPULATION",compTag:"维度,枚举",compTime:"2026-05-18 05:50"},
+      {name:"rule_id",type:"varchar(32)",origDesc:"规则ID",origTag:"",compDesc:"触发合规规则的唯一标识",compTag:"标识",compTime:"2026-05-18 05:50"},
+      {name:"result",type:"varchar(8)",origDesc:"检查结果",origTag:"",compDesc:"PASS/FLAG/BLOCK 三级结果",compTag:"状态,枚举",compTime:"2026-05-18 05:50"},
+      {name:"checked_at",type:"timestamp",origDesc:"检查时间",origTag:"",compDesc:"合规规则执行时间戳",compTag:"审计,时间",compTime:"2026-05-18 05:50"},
+      {name:"reviewer",type:"varchar(64)",origDesc:"复核人",origTag:"",compDesc:"人工复核人员姓名",compTag:"",compTime:"2026-05-18 05:50"}
+    ],
+    review_status: "approved", submitted_at: "2026-05-23 09:15", submitted_by: "AI 补全引擎"
+  },
+  {
+    review_id: "rev_015", entity_id: "fact_cash_flow", entity_name: "fact_cash_flow",
+    entity_type: "表", system: "财务系统", database: "ods_finance", schema: "public",
+    original: { display_name: "资金流水表", description: "现金流明细" },
+    suggestions: { display_name: "资金流水事实表", description: "资金流水事实表，含资金划拨、利息支付、费用扣收等现金流明细", tags: ["财务", "资金", "流水"], confidence: 0.55 },
+    quality: { rules: [{ name: "描述覆盖率", status: "fail", detail: "与原始描述高度重复，缺乏新增信息" }], summary: "0 通过 / 1 未通过" },
+    references: [],
+    columns: [
+      {name:"flow_id",type:"bigint",origDesc:"流水ID",origTag:"主键",compDesc:"资金流水唯一标识",compTag:"主键",compTime:"2026-05-18 04:20"},
+      {name:"account_id",type:"bigint",origDesc:"账户ID",origTag:"外键",compDesc:"关联dim_account.account_id",compTag:"外键",compTime:"2026-05-18 04:20"},
+      {name:"flow_type",type:"varchar(16)",origDesc:"流水类型",origTag:"维度",compDesc:"TRANSFER/INTEREST/FEE/DIVIDEND/TAX",compTag:"维度,枚举",compTime:"2026-05-18 04:20"},
+      {name:"amount",type:"decimal(18,4)",origDesc:"金额",origTag:"指标",compDesc:"流入为正，流出为负",compTag:"指标,金额",compTime:"2026-05-18 04:20"},
+      {name:"currency",type:"varchar(3)",origDesc:"币种",origTag:"维度",compDesc:"ISO 4217 货币代码",compTag:"维度",compTime:"2026-05-18 04:20"},
+      {name:"flow_date",type:"date",origDesc:"发生日期",origTag:"分区",compDesc:"资金变动日期",compTag:"日期,分区",compTime:"2026-05-18 04:20"},
+      {name:"counterparty_account",type:"varchar(64)",origDesc:"对手账户",origTag:"",compDesc:"对手方银行账户号码",compTag:"",compTime:"2026-05-18 04:20"},
+      {name:"remark",type:"varchar(256)",origDesc:"摘要",origTag:"",compDesc:"业务摘要说明",compTag:"",compTime:"2026-05-18 04:20"}
+    ],
+    review_status: "rejected", submitted_at: "2026-05-22 14:00", submitted_by: "AI 补全引擎"
+  }
+];
+
+/* ── State ── */
+let activeStatusFilter = 'pending_review';
+let activeTypeFilter = 'all';
+let activeSystemFilter = 'all';
+let activeDbFilter = 'all';
+let activeSchemaFilter = 'all';
+let confMin = 0;
+let sortField = 'submitted_at';
+let sortDir = 'desc';
+let selectedIds = new Set();
+let currentReview = null;
+let editedSuggestions = null;
+let isLoading = false;
+let hasError = false;
+
+/* ── Filter logic ── */
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  let list = [...REVIEW_QUEUE];
+  list.forEach(r => { if (r.suggestions.confidence >= 0.8) r.review_status = 'approved'; });
+  if (activeStatusFilter !== 'all') list = list.filter(r => r.review_status === activeStatusFilter);
+  if (activeTypeFilter !== 'all') list = list.filter(r => r.entity_type === activeTypeFilter);
+  if (activeSystemFilter !== 'all') list = list.filter(r => r.system === activeSystemFilter);
+  if (activeDbFilter !== 'all') list = list.filter(r => r.database === activeDbFilter);
+  if (activeSchemaFilter !== 'all') list = list.filter(r => r.schema === activeSchemaFilter);
+  list = list.filter(r => r.entity_type !== '字段');
+  list = list.filter(r => r.suggestions.confidence >= confMin);
+  if (q) {
+    list = list.filter(r =>
+      r.entity_name.toLowerCase().includes(q) ||
+      (r.suggestions.display_name || '').toLowerCase().includes(q) ||
+      (r.suggestions.description || '').toLowerCase().includes(q) ||
+      (r.suggestions.tags || []).join(' ').toLowerCase().includes(q) ||
+      r.system.toLowerCase().includes(q) ||
+      r.database.toLowerCase().includes(q)
+    );
+  }
+  list.sort((a, b) => {
+    let va, vb;
+    if (sortField === 'confidence') { va = a.suggestions.confidence; vb = b.suggestions.confidence; }
+    else if (sortField === 'submitted_at') { va = a.submitted_at; vb = b.submitted_at; }
+    else if (sortField === 'entity_name') { va = a.entity_name.toLowerCase(); vb = b.entity_name.toLowerCase(); }
+    else { va = (a[sortField] || '').toString().toLowerCase(); vb = (b[sortField] || '').toString().toLowerCase(); }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return list;
+}
+
+/* ── Render table ── */
+function renderTable() {
+  const list = getFiltered();
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  const table = document.getElementById('reviewTable');
+  const count = document.getElementById('queueCount');
+  const error = document.getElementById('errorState');
+  const loading = document.getElementById('loadingState');
+  const emptyText = document.getElementById('emptyText');
+
+  error.style.display = 'none';
+  loading.style.display = 'none';
+
+  count.textContent = `${list.length} 条记录`;
+  const isEmpty = list.length === 0;
+  empty.style.display = isEmpty ? 'block' : 'none';
+  table.style.display = isEmpty ? 'none' : '';
+
+  if (activeStatusFilter === 'pending_review') emptyText.textContent = '暂无待审核记录';
+  else if (activeStatusFilter === 'approved') emptyText.textContent = '暂无已确认记录';
+  else if (activeStatusFilter === 'rejected') emptyText.textContent = '暂无已驳回记录';
+  else emptyText.textContent = '暂无审核记录';
+
+  const statusLabels = { pending_review: '待审核', approved: '已确认', rejected: '已驳回' };
+  const statusColors = { pending_review: 'amber', approved: 'green', rejected: 'red' };
+
+  tbody.innerHTML = list.map(r => {
+    const checked = selectedIds.has(r.review_id) ? ' checked' : '';
+    const conf = r.suggestions.confidence;
+    const confLevel = conf >= 0.8 ? 'high' : conf >= 0.6 ? 'mid' : 'low';
+    const isPending = r.review_status === 'pending_review';
+    return `
+    <tr class="row-clickable" onclick="openDetail('${r.review_id}')">
+      <td class="checkbox-cell" onclick="event.stopPropagation()"><input type="checkbox"${checked} onchange="toggleSelect('${r.review_id}',this.checked)"${isPending ? '' : ' disabled'}></td>
+      <td><span class="cell-name">${r.entity_name}</span></td>
+      <td><span class="tag tag-slate">${r.entity_type}</span></td>
+      <td><span class="cell-mono">${r.database}</span></td>
+	      <td><span class="cell-mono">${r.schema}</span></td>
+	      <td><span class="cell-mono">${r.system}</span></td>
+      <td>
+        <div class="conf-cell">
+          <div class="conf-bar"><div class="conf-bar-fill ${confLevel}" style="width:${conf*100}%"></div></div>
+          <span class="conf-value">${(conf*100).toFixed(0)}%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-${statusColors[r.review_status]}">${statusLabels[r.review_status]}</span></td>
+      <td class="cell-mono">${r.submitted_at}</td>
+    </tr>
+  `}).join('');
+
+  /* Sort indicators */
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    const f = th.dataset.sort;
+    th.classList.toggle('sorted', f === sortField);
+    const arrow = th.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = f === sortField ? (sortDir === 'asc' ? '↑' : '↓') : '';
+  });
+
+  renderOpsBar(list);
+}
+
+/* ── Filter dropdowns ── */
+function renderFilters() {
+  const types = ['all', ...new Set(REVIEW_QUEUE.map(r => r.entity_type))];
+  const systems = ['all', ...new Set(REVIEW_QUEUE.map(r => r.system))];
+  const dbs = ['all', ...new Set(REVIEW_QUEUE.map(r => r.database))];
+  const schemas = ['all', ...new Set(REVIEW_QUEUE.map(r => r.schema))];
+
+  document.getElementById('typeFilters').innerHTML = types.map(t =>
+    `<button class="filter-chip${activeTypeFilter===t?' active':''}" data-type="${t}" onclick="setTypeFilter('${t}')">${t==='all'?'全部类型':t}</button>`
+  ).join('');
+
+  const systemSelect = document.getElementById('systemFilter');
+  systemSelect.innerHTML = systems.map(s => `<option value="${s}"${activeSystemFilter===s?' selected':''}>${s==='all'?'全部系统':s}</option>`).join('');
+  systemSelect.classList.toggle('active', activeSystemFilter !== 'all');
+
+  const dbSelect = document.getElementById('dbFilter');
+  dbSelect.innerHTML = dbs.map(d => `<option value="${d}"${activeDbFilter===d?' selected':''}>${d==='all'?'全部库':d}</option>`).join('');
+  dbSelect.classList.toggle('active', activeDbFilter !== 'all');
+
+  const schemaSelect = document.getElementById('schemaFilter');
+  schemaSelect.innerHTML = schemas.map(s => `<option value="${s}"${activeSchemaFilter===s?' selected':''}>${s==='all'?'全部Schema':s}</option>`).join('');
+  schemaSelect.classList.toggle('active', activeSchemaFilter !== 'all');
+}
+
+/* ── Ops bar ── */
+function renderOpsBar(list) {
+  const total = list.length;
+  document.getElementById('opsCount').textContent = `共 ${total} 条`;
+
+  const selectableIds = list.filter(r => r.review_status === 'pending_review').map(r => r.review_id);
+  const selCount = [...selectedIds].filter(id => selectableIds.includes(id)).length;
+
+  const selSpan = document.getElementById('selectedCount');
+  const approveBtn = document.getElementById('batchApproveBtn');
+  const rejectBtn = document.getElementById('batchRejectBtn');
+
+  selSpan.style.display = selCount > 0 ? '' : 'none';
+  selSpan.textContent = `已选 ${selCount} 项`;
+  approveBtn.disabled = selCount === 0;
+  rejectBtn.disabled = selCount === 0;
+
+  document.getElementById('selectAll').checked = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
+}
+
+/* ── Selection ── */
+function toggleSelectAll(on) {
+  const pendingIds = getFiltered().filter(r => r.review_status === 'pending_review').map(r => r.review_id);
+  if (on) { pendingIds.forEach(id => selectedIds.add(id)); }
+  else { pendingIds.forEach(id => selectedIds.delete(id)); }
+  renderTable();
+}
+
+function toggleSelect(id, on) {
+  if (on) { selectedIds.add(id); }
+  else { selectedIds.delete(id); }
+  renderTable();
+}
+
+/* ── Detail navigation ── */
+function openDetail(reviewId) {
+  window.location.href = 'review_detail.html?id=' + reviewId;
+}
+
+function switchDetailTab(tab, btn) {
+  window._detailTab = tab;
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-info').style.display = tab === 'info' ? '' : 'none';
+  document.getElementById('tab-compare').style.display = tab === 'compare' ? '' : 'none';
+  document.getElementById('tab-columns').style.display = tab === 'columns' ? '' : 'none';
+  document.getElementById('tab-quality').style.display = tab === 'quality' ? '' : 'none';
+  document.getElementById('tab-reference').style.display = tab === 'reference' ? '' : 'none';
+}
+
+function onSuggestionEdit() {
+  const displayName = document.getElementById('editDisplayName')?.value || '';
+  const desc = document.getElementById('editDesc')?.value || '';
+  const tags = document.getElementById('editTags')?.value || '';
+
+  const orig = currentReview.suggestions;
+  const modified = displayName !== orig.display_name || desc !== orig.description || tags !== orig.tags.join(', ');
+
+  const btn = document.getElementById('modifyConfirmBtn');
+  if (btn) btn.disabled = !modified;
+
+  if (modified) {
+    editedSuggestions = { display_name: displayName, description: desc, tags: tags.split(',').map(t => t.trim()).filter(Boolean) };
+  } else {
+    editedSuggestions = null;
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentReview = null;
+  editedSuggestions = null;
+  window._columnEdits = null;
+}
+
+/* ── Columns tab ── */
+function renderColumnsTabContent(r) {
+  if (!r.columns || r.columns.length === 0) {
+    return `<div class="col-no-columns">该资产类型为「${r.entity_type}」，无列信息可展示</div>`;
+  }
+
+  window._columnEdits = window._columnEdits || {};
+
+  const rows = r.columns.map((col, i) => {
+    const origTags = (col.origTag || '').split(',').map(t => t.trim()).filter(Boolean);
+    const editKey = `col_${i}`;
+    const edits = window._columnEdits[editKey] || {};
+    const compDescVal = edits.compDesc !== undefined ? edits.compDesc : (col.compDesc || '');
+    const compTagVal = edits.compTag !== undefined ? edits.compTag : (col.compTag || '');
+    const compDescDirty = edits.compDesc !== undefined && edits.compDesc !== (col.compDesc || '');
+    const compTagDirty = edits.compTag !== undefined && edits.compTag !== (col.compTag || '');
+
+    const origTagHtml = origTags.length
+      ? origTags.map(t => `<span class="tag tag-slate">${t}</span>`).join('')
+      : '<span class="cell-empty">—</span>';
+
+    const compDescHtml = compDescVal
+      ? `<input class="col-edit${compDescDirty ? ' col-edit-dirty' : ''}" value="${compDescVal.replace(/"/g,'&quot;')}" data-col="${i}" data-field="compDesc" oninput="onColumnEdit(this)" placeholder="补全描述…">`
+      : `<input class="col-edit" value="" data-col="${i}" data-field="compDesc" oninput="onColumnEdit(this)" placeholder="补全描述…">`;
+
+    const compTagHtml = `<input class="col-edit${compTagDirty ? ' col-edit-dirty' : ''}" value="${compTagVal.replace(/"/g,'&quot;')}" data-col="${i}" data-field="compTag" oninput="onColumnEdit(this)" placeholder="补全分类标签…">`;
+
+    const compTimeHtml = col.compTime || '<span class="cell-empty">—</span>';
+
+    return `<tr>
+      <td><span class="col-name">${col.name}</span></td>
+      <td><span class="col-type">${col.type}</span></td>
+      <td><div class="cell-desc">${col.origDesc || '<span class="cell-empty">—</span>'}</div></td>
+      <td><div class="cell-tags">${origTagHtml}</div></td>
+      <td>${compDescHtml}</td>
+      <td>${compTagHtml}</td>
+      <td><span class="cell-time">${compTimeHtml}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="detail-section">
+      <div class="detail-section-title">列信息 (${r.columns.length} 列)</div>
+      <div class="detail-cols-wrap">
+        <table class="detail-cols-table">
+          <thead>
+            <tr>
+              <th>列名</th>
+              <th>类型</th>
+              <th>原始描述</th>
+              <th>原始分类标签</th>
+              <th>补全描述</th>
+              <th>补全分类标签</th>
+              <th>补全时间</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" id="colSaveBtn" disabled onclick="saveColumnEdits()">保存列信息</button>
+      </div>
+    </div>`;
+}
+
+function onColumnEdit(input) {
+  const colIdx = parseInt(input.dataset.col);
+  const field = input.dataset.field;
+  const value = input.value.trim();
+
+  window._columnEdits = window._columnEdits || {};
+  const editKey = `col_${colIdx}`;
+  if (!window._columnEdits[editKey]) window._columnEdits[editKey] = {};
+  window._columnEdits[editKey][field] = value;
+
+  const col = currentReview.columns[colIdx];
+  const dirty = (window._columnEdits[editKey].compDesc !== undefined && window._columnEdits[editKey].compDesc !== (col.compDesc || ''))
+    || (window._columnEdits[editKey].compTag !== undefined && window._columnEdits[editKey].compTag !== (col.compTag || ''));
+  input.classList.toggle('col-edit-dirty', dirty);
+
+  updateColumnSaveBtn();
+}
+
+function updateColumnSaveBtn() {
+  const btn = document.getElementById('colSaveBtn');
+  if (!btn) return;
+  const hasEdits = window._columnEdits && Object.values(window._columnEdits).some(edits => {
+    return (edits.compDesc !== undefined) || (edits.compTag !== undefined);
+  });
+  btn.disabled = !hasEdits;
+}
+
+function saveColumnEdits() {
+  if (!currentReview || !currentReview.columns || !window._columnEdits) return;
+
+  Object.entries(window._columnEdits).forEach(([key, edits]) => {
+    const colIdx = parseInt(key.split('_')[1]);
+    if (edits.compDesc !== undefined) currentReview.columns[colIdx].compDesc = edits.compDesc;
+    if (edits.compTag !== undefined) currentReview.columns[colIdx].compTag = edits.compTag;
+    currentReview.columns[colIdx].compTime = new Date().toISOString().replace('T',' ').substring(0,19);
+  });
+
+  window._columnEdits = {};
+  showToast('列信息已保存', 'success');
+
+  /* Re-render columns tab */
+  const tabBody = document.getElementById('tab-columns');
+  if (tabBody && currentReview) {
+    tabBody.innerHTML = renderColumnsTabContent(currentReview);
+  }
+}
+
+/* ── Approve flow ── */
+function openConfirm() {
+  document.getElementById('confirmMessage').textContent =
+    `确认采纳「${currentReview.entity_name}」的 AI 补全建议？将回写至 OpenMetadata。`;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function doApprove() {
+  if (currentReview) {
+    currentReview.review_status = 'approved';
+    showToast('已确认采纳「' + currentReview.entity_name + '」的补全建议', 'success');
+  }
+  closeConfirm();
+  closeDetail();
+  selectedIds.clear();
+  renderTable();
+}
+
+/* ── Modify + confirm flow ── */
+function doModifyConfirm() {
+  if (!currentReview || !editedSuggestions) return;
+  currentReview.suggestions.display_name = editedSuggestions.display_name;
+  currentReview.suggestions.description = editedSuggestions.description;
+  currentReview.suggestions.tags = editedSuggestions.tags;
+  currentReview.review_status = 'approved';
+  showToast('已修改并确认「' + currentReview.entity_name + '」的补全建议', 'success');
+  closeDetail();
+  selectedIds.clear();
+  renderTable();
+}
+
+/* ── Reject flow ── */
+function openReject() {
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectError').style.display = 'none';
+  document.getElementById('rejectOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeReject() {
+  document.getElementById('rejectOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function doReject() {
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) {
+    document.getElementById('rejectError').style.display = 'block';
+    return;
+  }
+  if (currentReview) {
+    currentReview.review_status = 'rejected';
+    currentReview._reject_reason = reason;
+    showToast('已驳回「' + currentReview.entity_name + '」的补全建议', 'success');
+  }
+  closeReject();
+  closeDetail();
+  selectedIds.clear();
+  renderTable();
+}
+
+/* ── Batch approve ── */
+function batchApprove() {
+  const ids = [...selectedIds].filter(id => REVIEW_QUEUE.find(r => r.review_id === id && r.review_status === 'pending_review'));
+  if (ids.length === 0) return;
+  document.getElementById('batchConfirmMessage').textContent = `确认批量采纳 ${ids.length} 条补全建议？将回写至 OpenMetadata。`;
+  document.getElementById('batchConfirmOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  window._batchIds = ids;
+}
+
+function closeBatchConfirm() {
+  document.getElementById('batchConfirmOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function doBatchApprove() {
+  const ids = window._batchIds || [];
+  simulateBatchProgress(ids, 'approve');
+  closeBatchConfirm();
+}
+
+/* ── Batch reject ── */
+function batchReject() {
+  const ids = [...selectedIds].filter(id => REVIEW_QUEUE.find(r => r.review_id === id && r.review_status === 'pending_review'));
+  if (ids.length === 0) return;
+  document.getElementById('batchRejectReason').value = '';
+  document.getElementById('batchRejectError').style.display = 'none';
+  document.getElementById('batchRejectOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  window._batchIds = ids;
+}
+
+function closeBatchReject() {
+  document.getElementById('batchRejectOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function doBatchReject() {
+  const reason = document.getElementById('batchRejectReason').value.trim();
+  if (!reason) {
+    document.getElementById('batchRejectError').style.display = 'block';
+    return;
+  }
+  const ids = window._batchIds || [];
+  closeBatchReject();
+  simulateBatchProgress(ids, 'reject', reason);
+}
+
+/* ── Batch progress ── */
+function simulateBatchProgress(ids, action, reason) {
+  const overlay = document.getElementById('progressOverlay');
+  const bar = document.getElementById('progressBar');
+  const text = document.getElementById('progressText');
+  const title = document.getElementById('progressTitle');
+
+  const label = action === 'approve' ? '批量确认' : '批量驳回';
+  title.textContent = `${label}处理中…`;
+  bar.style.width = '0%';
+  text.textContent = `0 / ${ids.length}`;
+  overlay.classList.add('open');
+
+  let done = 0;
+  const interval = setInterval(() => {
+    done++;
+    const pct = (done / ids.length) * 100;
+    bar.style.width = pct + '%';
+    text.textContent = `${done} / ${ids.length}`;
+
+    const r = REVIEW_QUEUE.find(x => x.review_id === ids[done - 1]);
+    if (r) {
+      if (action === 'approve') r.review_status = 'approved';
+      else { r.review_status = 'rejected'; r._reject_reason = reason; }
+    }
+
+    if (done >= ids.length) {
+      clearInterval(interval);
+      setTimeout(() => {
+        overlay.classList.remove('open');
+        selectedIds.clear();
+        renderFilters();
+        renderTable();
+        showToast(`${label}完成：${ids.length} 条记录已处理`, 'success');
+      }, 400);
+    }
+  }, 200);
+}
+
+/* ── Toast ── */
+function showToast(msg, type) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 3000);
+}
+
+/* ── Loading ── */
+function loadQueue() {
+  isLoading = true;
+  hasError = false;
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById('reviewTable').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+
+  setTimeout(() => {
+    isLoading = false;
+    /* Simulate 5% error rate */
+    if (Math.random() < 0.05) {
+      hasError = true;
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'block';
+      return;
+    }
+    document.getElementById('loadingState').style.display = 'none';
+    renderFilters();
+    renderTable();
+  }, 800);
+}
+
+/* ── Filter handlers ── */
+function setStatusFilter(v) {
+  activeStatusFilter = v;
+  if (v !== 'pending_review') {
+    document.getElementById('confRange').value = 0;
+    confMin = 0;
+    document.getElementById('confMinLabel').textContent = '0';
+  }
+  selectedIds.clear();
+  renderFilters();
+  renderTable();
+}
+
+function setSystemFilter(v) { activeSystemFilter = v; renderFilters(); renderTable(); }
+function setDbFilter(v) { activeDbFilter = v; renderFilters(); renderTable(); }
+function setSchemaFilter(v) { activeSchemaFilter = v; renderFilters(); renderTable(); }
+
+function setTypeFilter(t) {
+  activeTypeFilter = t;
+  renderFilters();
+  renderTable();
+}
+
+function setConfMin(v) {
+  confMin = parseInt(v) / 100;
+  document.getElementById('confMinLabel').textContent = (confMin * 100).toFixed(0);
+  selectedIds.clear();
+  renderTable();
+}
+
+/* ── Search ── */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('searchInput').addEventListener('input', renderTable);
+});
+
+/* ── Sort ── */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const f = th.dataset.sort;
+      if (sortField === f) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+      else { sortField = f; sortDir = f === 'submitted_at' ? 'desc' : 'asc'; }
+      renderTable();
+    });
+  });
+});
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDetail(); closeConfirm(); closeReject();
+    closeBatchConfirm(); closeBatchReject();
+  }
+});
+
+/* ── Init ── */
+loadQueue();
+</script>
+</body>
+</html>

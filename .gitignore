@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+
+# Environment
+.env
+
+# Database — seed data (metadata.db/tantivy/chroma) committed, ephemeral excluded
+*.db-journal
+backend/data/celery.db
+backend/data/test.db
+backend/data/completion.db
+data/
+backend/app/data/
+
+# IDE
+.idea/
+.superpowers/
+
+# Node
+node_modules/
+.vite/
+dist/
+
+# Test artifacts
+frontend/test-results/
+
+# OS
+.DS_Store
+
+# Tantivy lock files (generated at runtime)
+*.tantivy-meta.lock
+*.tantivy-writer.lock

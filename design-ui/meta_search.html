@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaGraph — 数仓元数据管理平台</title>
+<style>
+/* ── Design tokens: modern-minimal ── */
+:root {
+  --bg:      oklch(99% 0.002 240);
+  --surface: oklch(100% 0 0);
+  --fg:      oklch(18% 0.012 250);
+  --muted:   oklch(54% 0.012 250);
+  --border:  oklch(92% 0.005 250);
+  --accent:  oklch(58% 0.18 255);
+  --accent-soft: oklch(58% 0.18 255 / 0.08);
+  --success: oklch(62% 0.16 145);
+  --warn:    oklch(72% 0.15 75);
+  --danger:  oklch(52% 0.20 25);
+
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --max-width: 1200px;
+  --nav-height: 56px;
+}
+
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Nav ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: oklch(99% 0.002 240 / 0.82);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  height: var(--nav-height);
+  display: flex; align-items: center;
+}
+.nav-inner {
+  max-width: var(--max-width); width: 100%; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 24px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  letter-spacing: -0.01em; color: var(--fg); text-decoration: none;
+}
+.nav-logo svg { color: var(--accent); }
+.nav-links { display: flex; gap: 4px; margin-left: auto; }
+.nav-link {
+  padding: 6px 14px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; color: var(--muted);
+  text-decoration: none; transition: all 0.15s;
+}
+.nav-link:hover, .nav-link.active { color: var(--fg); background: var(--border); }
+
+/* ── Hero ── */
+.hero {
+  padding: 72px 24px 56px;
+  text-align: center; max-width: 720px; margin: 0 auto;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 13px; font-weight: 600; margin-bottom: 24px;
+  font-family: var(--font-mono); letter-spacing: -0.01em;
+}
+.hero-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700; letter-spacing: -0.02em; line-height: 1.15;
+  color: var(--fg); margin-bottom: 16px;
+}
+.hero h1 span { color: var(--accent); }
+.hero p {
+  font-size: clamp(16px, 2.2vw, 19px); color: var(--muted);
+  max-width: 560px; margin: 0 auto 32px; line-height: 1.6;
+}
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 22px; border-radius: var(--radius-sm);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  border: none; text-decoration: none; transition: all 0.15s;
+  font-family: var(--font-body);
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+
+/* ── Search bar ── */
+.search-section {
+  max-width: var(--max-width); margin: 0 auto; padding: 32px 24px 32px;
+}
+.search-bar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 8px 10px;
+}
+.search-bar:focus-within { border-color: var(--accent); }
+.search-bar-row { display: flex; gap: 10px; align-items: center; width: 100%; }
+.search-icon { color: var(--muted); flex-shrink: 0; }
+.search-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: 15px; font-family: var(--font-body); color: var(--fg);
+  min-width: 0;
+}
+.search-input::placeholder { color: var(--muted); }
+.filter-group { display: flex; gap: 6px; flex-shrink: 0; }
+.filter-bar {
+  display: flex; gap: 8px; align-items: center; width: 100%;
+  overflow-x: auto; padding-top: 2px;
+}
+.filter-chip {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  background: transparent; color: var(--muted); font-family: var(--font-body);
+  transition: all 0.15s;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--fg); }
+.filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.filter-sep { width: 1px; background: var(--border); margin: 0 4px; align-self: stretch; }
+.result-count {
+  font-size: 13px; color: var(--muted); padding-left: 8px;
+  flex-shrink: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+
+/* ── Ops bar ── */
+.ops-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap; gap: 10px;
+}
+.ops-bar-left { display: flex; align-items: center; gap: 12px; }
+.ops-count { font-size: 13px; color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.ops-bar-right { display: flex; align-items: center; gap: 10px; }
+.ops-selected { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; display: none; }
+.ops-batch-btn {
+  padding: 6px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  font-family: var(--font-body); transition: all 0.15s; white-space: nowrap;
+}
+.ops-batch-btn:hover:not(:disabled) { opacity: 0.88; }
+.ops-batch-btn:disabled {
+  background: transparent; border-color: var(--border); color: var(--muted); cursor: not-allowed; opacity: 0.5;
+}
+.checkbox-cell { width: 40px; text-align: center; padding: 10px 8px !important; }
+.checkbox-cell input[type="checkbox"] {
+  width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); margin: 0;
+}
+th.checkbox-cell { padding: 12px 8px !important; }
+
+/* ── Filter selects (DB + Schema dropdowns) ── */
+.filter-select-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.filter-select {
+  appearance: none;
+  padding: 5px 28px 5px 10px;
+  border-radius: 20px; border: 1px solid var(--border);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  background: transparent; color: var(--muted);
+  font-family: var(--font-body);
+  transition: all 0.15s; min-width: 0;
+}
+.filter-select:hover { border-color: var(--accent); color: var(--fg); }
+.filter-select.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.filter-select-wrap::after {
+  content: ''; position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%); pointer-events: none;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+
+/* ── Expand button for domain overflow ── */
+.expand-btn {
+  padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--border);
+  font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+  background: transparent; color: var(--muted); font-family: var(--font-body);
+  transition: all 0.15s;
+}
+.expand-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Domain popup overlay ── */
+.domain-popup-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: oklch(18% 0.012 250 / 0.25);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.domain-popup-overlay.open { display: flex; }
+.domain-popup {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); width: 100%; max-width: 420px;
+  padding: 24px;
+  box-shadow: 0 20px 60px oklch(18% 0.012 250 / 0.12);
+}
+.domain-popup-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.domain-popup-header span { font-size: 15px; font-weight: 600; }
+.domain-popup-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--muted); transition: all 0.15s;
+}
+.domain-popup-close:hover { color: var(--fg); border-color: var(--fg); }
+.domain-popup-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.domain-popup-chips .filter-chip { font-size: 14px; padding: 6px 14px; }
+
+/* ── Table ── */
+.table-section {
+  max-width: var(--max-width); margin: 0 auto; padding: 0 24px 56px;
+}
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.table-scroll { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 14px; font-variant-numeric: tabular-nums;
+}
+thead { border-bottom: 2px solid var(--border); }
+th {
+  text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  white-space: nowrap; cursor: pointer; user-select: none;
+  transition: color 0.15s;
+}
+th:hover { color: var(--fg); }
+th.sorted { color: var(--accent); }
+th .sort-arrow { margin-left: 4px; font-size: 10px; }
+td { padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+.cell-name {
+  font-weight: 600; color: var(--accent); cursor: pointer;
+  font-family: var(--font-mono); font-size: 13px;
+}
+.cell-name:hover { text-decoration: underline; }
+.cell-mono { font-family: var(--font-mono); font-size: 13px; }
+.cell-desc { display: inline-block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 12px; font-weight: 500;
+}
+.tag-blue { background: oklch(58% 0.18 255 / 0.1); color: var(--accent); }
+.tag-green { background: oklch(62% 0.16 145 / 0.1); color: var(--success); }
+.tag-amber { background: oklch(72% 0.15 75 / 0.12); color: oklch(55% 0.13 70); }
+.tag-slate { background: oklch(54% 0.012 250 / 0.08); color: var(--muted); }
+
+.status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+.status-dot.on { background: var(--success); }
+.status-dot.off { background: var(--border); }
+
+/* ── Empty state ── */
+.empty-state { display: none; text-align: center; padding: 64px 24px; color: var(--muted); }
+.empty-state svg { opacity: 0.3; margin-bottom: 12px; }
+.empty-state p { font-size: 15px; }
+
+/* ── Detail panel ── */
+.detail-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: oklch(18% 0.012 250 / 0.3);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.detail-overlay.open { display: flex; }
+.detail-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); width: 100%; max-width: 560px;
+  max-height: 80vh; overflow-y: auto; padding: 32px;
+  box-shadow: 0 20px 60px oklch(18% 0.012 250 / 0.12);
+}
+.detail-panel h3 { font-family: var(--font-mono); font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.detail-panel .detail-type {
+  font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 16px;
+}
+.detail-row { display: flex; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.detail-row:last-child { border-bottom: none; }
+.detail-label { width: 100px; color: var(--muted); flex-shrink: 0; font-size: 13px; }
+.detail-value { flex: 1; }
+.detail-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--muted); transition: all 0.15s;
+}
+.detail-close:hover { color: var(--fg); border-color: var(--fg); }
+
+/* ── Action buttons in table ── */
+.action-btns { display: flex; gap: 6px; }
+.action-btn {
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--fg); font-family: var(--font-body);
+  transition: all 0.15s; white-space: nowrap;
+}
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.action-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.action-btn.primary:hover { opacity: 0.88; }
+
+/* ── Confirm dialog ── */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 250;
+  background: oklch(18% 0.012 250 / 0.3);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.confirm-overlay.open { display: flex; }
+.confirm-dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); width: 100%; max-width: 400px;
+  padding: 28px;
+  box-shadow: 0 20px 60px oklch(18% 0.012 250 / 0.12);
+}
+.confirm-dialog p { font-size: 15px; line-height: 1.6; margin-bottom: 20px; color: var(--fg); }
+.confirm-dialog .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-dialog .confirm-actions .action-btn { font-size: 14px; padding: 7px 18px; }
+
+/* ── Footer ── */
+.footer {
+  border-top: 1px solid var(--border); padding: 24px;
+  text-align: center; font-size: 13px; color: var(--muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-inner { padding: 0 16px; }
+  .hero { padding: 48px 16px 40px; }
+  .search-section { padding: 0 16px 24px; }
+  .search-input { min-width: 120px; }
+  .filter-bar { flex-wrap: wrap; gap: 6px; }
+  .filter-sep { display: none; }
+  .result-count { display: none; }
+  .ops-bar { flex-direction: column; align-items: flex-start; }
+  .ops-bar-left { flex-wrap: wrap; }
+  .ops-bar-right { width: 100%; justify-content: space-between; }
+}
+@media (max-width: 480px) {
+  .hero h1 { font-size: 28px; }
+  .hero p { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="11" width="7" height="10" rx="1"/></svg>
+      MetaGraph
+    </a>
+    <div class="nav-links">
+      <a class="nav-link active" href="#">资产目录</a>
+      <a class="nav-link" href="review.html">审核工作台</a>
+      <a class="nav-link" href="#">补全溯源</a>
+      <a class="nav-link" href="#">参数配置</a>
+    </div>
+  </div>
+</nav>
+
+
+<!-- Search -->
+<section class="search-section">
+  <div class="search-bar">
+    <div class="search-bar-row">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" id="searchInput" type="text" placeholder="搜索表名、字段、描述、标签…" autocomplete="off">
+      <span class="result-count" id="resultCount">—</span>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="systemFilter" onchange="setSystemFilter(this.value)">
+          <option value="all">全部系统</option>
+        </select>
+      </div>
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="dbFilter" onchange="setDbFilter(this.value)">
+          <option value="all">全部库</option>
+        </select>
+      </div>
+      <div class="filter-select-wrap">
+        <select class="filter-select" id="schemaFilter" onchange="setSchemaFilter(this.value)">
+          <option value="all">全部Schema</option>
+        </select>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-group" id="typeFilters"></div>
+      <div class="filter-sep"></div>
+      <div class="filter-group" id="domainFilters"></div>
+      <button class="expand-btn" id="expandDomainsBtn" onclick="openDomainPopup()" style="display:none">展开</button>
+    </div>
+  </div>
+</section>
+
+<!-- Ops bar -->
+<section class="table-section" style="padding-bottom:12px">
+  <div class="ops-bar" id="opsBar">
+    <div class="ops-bar-left">
+      <span class="ops-count" id="opsCount">—</span>
+      <div class="filter-sep"></div>
+      <div class="filter-group" id="completionFilters"></div>
+    </div>
+    <div class="ops-bar-right">
+      <span class="ops-selected" id="selectedCount">已选 0 项</span>
+      <button class="ops-batch-btn" id="batchApplyBtn" disabled onclick="batchApplyCompletion()">批量申请补全</button>
+    </div>
+  </div>
+</section>
+
+<!-- Table -->
+<section class="table-section">
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this.checked)"></th>
+            <th data-sort="name">资产名称 <span class="sort-arrow"></span></th>
+            <th>描述</th>
+            <th data-sort="system">所属系统</th>
+            <th data-sort="type">类型</th>
+            <th data-sort="database">所属库</th>
+            <th data-sort="schema">Schema</th>
+            <th data-sort="domain">业务域</th>
+            <th data-sort="classification">分类</th>
+            <th data-sort="completion">补全状态</th>
+            <th data-sort="updated">更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p>没有匹配的元数据资产</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  MetaGraph · 数仓元数据管理平台 · 演示版本
+</footer>
+
+<!-- Domain popup -->
+<div class="domain-popup-overlay" id="domainPopupOverlay" onclick="if(event.target===this)closeDomainPopup()">
+  <div class="domain-popup">
+    <div class="domain-popup-header">
+      <span>选择业务域</span>
+      <button class="domain-popup-close" onclick="closeDomainPopup()">✕</button>
+    </div>
+    <div class="domain-popup-chips" id="domainPopupChips"></div>
+  </div>
+</div>
+
+<!-- Detail overlay -->
+<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="confirm-overlay" id="confirmOverlay" onclick="if(event.target===this)closeConfirm()">
+  <div class="confirm-dialog">
+    <p id="confirmMessage">将根据资产所属系统智能补全信息。</p>
+    <div class="confirm-actions">
+      <button class="action-btn" onclick="closeConfirm()">取消</button>
+      <button class="action-btn primary" onclick="confirmCompletion()">确认申请</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Data: financial DW metadata assets ── */
+const ASSETS = [
+  { id:"fact_trade",       name:"fact_trade",       type:"表",   system:"交易系统",   database:"ods_trade",    schema:"public", domain:"交易",   classification:"机密",   owner:"张明",   desc:"逐笔交易流水事实表，含成交价格、数量、方向、交易对手等核心字段，按交易日分区", tags:"交易,核心,分区表", lineage:true,  updated:"2026-05-18 08:30", completion:"completed" },
+  { id:"fact_settlement",  name:"fact_settlement",  type:"表",   system:"清算系统",   database:"ods_settle",   schema:"public", domain:"清算",   classification:"机密",   owner:"陈芳",   desc:"结算流水表，记录每笔交易的清算状态、交收日期、结算金额及失败原因代码", tags:"清算,结算,核心", lineage:true,  updated:"2026-05-18 07:15", completion:"completed" },
+  { id:"dim_account",      name:"dim_account",      type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"客户",   classification:"机密",   owner:"王磊",   desc:"账户维度表，包含账户ID、账户类型、开户日期、所属机构、状态等基础属性", tags:"客户,维度,核心", lineage:true,  updated:"2026-05-17 22:40", completion:"completed" },
+  { id:"dim_counterparty", name:"dim_counterparty", type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"客户",   classification:"内部",   owner:"赵雪",   desc:"交易对手方维度表，记录机构名称、法人实体ID、信用评级、关联关系等", tags:"客户,对手方,维度", lineage:true,  updated:"2026-05-17 18:20", completion:"processing" },
+  { id:"dim_product",      name:"dim_product",      type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"产品",   classification:"内部",   owner:"周岚",   desc:"金融产品维度表，含产品代码、类型、发行人、到期日、利率等属性", tags:"产品,维度", lineage:true,  updated:"2026-05-17 14:55", completion:"pending" },
+  { id:"fact_market_data", name:"fact_market_data", type:"表",   system:"行情系统",   database:"ods_market",   schema:"public", domain:"行情",   classification:"公开",   owner:"林涛",   desc:"市场行情快照表，按分钟采集股票、债券、外汇的实时价格与指标数据", tags:"行情,市场,实时", lineage:true,  updated:"2026-05-18 09:00", completion:"completed" },
+  { id:"fact_risk_metric", name:"fact_risk_metric", type:"表",   system:"风控系统",   database:"dwd_risk",     schema:"risk",   domain:"风控",   classification:"机密",   owner:"黄立",   desc:"风险指标事实表，包含VaR、希腊字母、压力测试结果等风控核心度量", tags:"风控,VaR,核心", lineage:true,  updated:"2026-05-18 06:45", completion:"completed" },
+  { id:"dim_calendar",     name:"dim_calendar",     type:"表",   system:"公共系统",   database:"dwd_common",   schema:"md",     domain:"公共",   classification:"公开",   owner:"孙琪",   desc:"交易日历维度表，标注交易日、节假日、结算日、交割日等日期属性", tags:"公共,日历,维度", lineage:false, updated:"2026-05-16 10:00", completion:"pending" },
+  { id:"dim_org",          name:"dim_org",          type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"公共",   classification:"内部",   owner:"吴楠",   desc:"组织机构维度表，记录部门、团队、成本中心、法人实体间层级关系", tags:"公共,组织,维度", lineage:false, updated:"2026-05-17 09:30", completion:"processing" },
+  { id:"fact_compliance",  name:"fact_compliance",  type:"表",   system:"合规系统",   database:"dwd_comply",   schema:"comply", domain:"合规",   classification:"机密",   owner:"郑洁",   desc:"合规检查事实表，记录每笔交易的反洗钱筛查、内幕交易标记、合规规则命中结果", tags:"合规,AML,监管", lineage:true,  updated:"2026-05-18 05:50", completion:"completed" },
+  { id:"vw_trade_summary", name:"vw_trade_summary", type:"视图", system:"交易系统",   database:"dws_agg",      schema:"agg",    domain:"交易",   classification:"内部",   owner:"刘洋",   desc:"当日交易汇总视图，按产品类型、交易方向聚合成交金额与笔数", tags:"交易,汇总,视图", lineage:true,  updated:"2026-05-18 08:00", completion:"completed" },
+  { id:"col_trade_amount", name:"trade_amount",     type:"字段", system:"交易系统",   database:"ods_trade",    schema:"public", domain:"交易",   classification:"机密",   owner:"张明",   desc:"成交金额 — fact_trade.amount，decimal(18,4)，以交易币种计价", tags:"交易,字段,金额", lineage:true,  updated:"2026-05-18 08:30", completion:"pending" },
+  { id:"col_settle_date",  name:"settlement_date",  type:"字段", system:"清算系统",   database:"ods_settle",   schema:"public", domain:"清算",   classification:"机密",   owner:"陈芳",   desc:"交收日期 — fact_settlement.settle_date，date，T+1/T+2 根据产品类型", tags:"清算,字段,日期", lineage:true,  updated:"2026-05-18 07:15", completion:"processing" },
+  { id:"col_var_1d",       name:"var_1d_95",        type:"字段", system:"风控系统",   database:"dwd_risk",     schema:"risk",   domain:"风控",   classification:"机密",   owner:"黄立",   desc:"1日 95% 置信度 VaR — fact_risk_metric.var_1d_95，decimal(16,4)", tags:"风控,字段,VaR", lineage:true,  updated:"2026-05-18 06:45", completion:"completed" },
+  { id:"fact_position",    name:"fact_position",    type:"表",   system:"交易系统",   database:"dwd_position", schema:"pos",    domain:"交易",   classification:"机密",   owner:"张明",   desc:"持仓快照事实表，记录各账户每日持仓数量、成本、市值、浮动盈亏", tags:"交易,持仓,核心", lineage:true,  updated:"2026-05-18 08:45", completion:"processing" },
+  { id:"dim_rating",       name:"dim_rating",       type:"表",   system:"主数据系统", database:"dwd_master",   schema:"md",     domain:"风控",   classification:"内部",   owner:"赵雪",   desc:"信用评级维度表，记录外部评级（S&P/Moody's/Fitch）与内部评级映射", tags:"风控,评级,维度", lineage:false, updated:"2026-05-16 16:30", completion:"pending" },
+  { id:"fact_cash_flow",   name:"fact_cash_flow",   type:"表",   system:"财务系统",   database:"ods_finance",  schema:"public", domain:"财务",   classification:"机密",   owner:"陈芳",   desc:"资金流水事实表，含资金划拨、利息支付、费用扣收等现金流明细", tags:"财务,资金,流水", lineage:true,  updated:"2026-05-18 04:20", completion:"completed" },
+  { id:"vw_risk_dashboard",name:"vw_risk_dashboard",type:"视图", system:"风控系统",   database:"dws_agg",      schema:"agg",    domain:"风控",   classification:"机密",   owner:"黄立",   desc:"风控大屏视图，聚合当日 VaR、压力损失、集中度等关键风险指标", tags:"风控,大屏,视图", lineage:true,  updated:"2026-05-18 07:30", completion:"processing" },
+];
+
+/* ── State ── */
+let activeTypeFilter = 'all';
+let activeSystemFilter = 'all';
+let activeDbFilter = 'all';
+let activeSchemaFilter = 'all';
+let activeDomainFilter = 'all';
+let activeCompletionFilter = 'all';
+let sortField = 'name';
+let sortDir = 'asc';
+let selectedIds = new Set();
+
+/* ── Render filters ── */
+function renderFilters() {
+  const types = ['all', ...new Set(ASSETS.map(a => a.type))];
+  const systems = ['all', ...new Set(ASSETS.map(a => a.system))];
+  const dbs = ['all', ...new Set(ASSETS.map(a => a.database))];
+  const schemas = ['all', ...new Set(ASSETS.map(a => a.schema))];
+  const allDomains = ['all', ...new Set(ASSETS.map(a => a.domain))];
+
+  document.getElementById('typeFilters').innerHTML = types.map(t =>
+    `<button class="filter-chip${activeTypeFilter===t?' active':''}" data-type="${t}" onclick="setTypeFilter('${t}')">${t==='all'?'全部类型':t}</button>`
+  ).join('');
+
+  const systemSelect = document.getElementById('systemFilter');
+  systemSelect.innerHTML = systems.map(s => `<option value="${s}"${activeSystemFilter===s?' selected':''}>${s==='all'?'全部系统':s}</option>`).join('');
+  systemSelect.classList.toggle('active', activeSystemFilter !== 'all');
+
+  const dbSelect = document.getElementById('dbFilter');
+  dbSelect.innerHTML = dbs.map(d => `<option value="${d}"${activeDbFilter===d?' selected':''}>${d==='all'?'全部库':d}</option>`).join('');
+  dbSelect.classList.toggle('active', activeDbFilter !== 'all');
+
+  const schemaSelect = document.getElementById('schemaFilter');
+  schemaSelect.innerHTML = schemas.map(s => `<option value="${s}"${activeSchemaFilter===s?' selected':''}>${s==='all'?'全部Schema':s}</option>`).join('');
+  schemaSelect.classList.toggle('active', activeSchemaFilter !== 'all');
+
+  const VISIBLE_DOMAINS = 5;
+  const domainContainer = document.getElementById('domainFilters');
+  const expandBtn = document.getElementById('expandDomainsBtn');
+
+  if (allDomains.length <= VISIBLE_DOMAINS + 1) {
+    domainContainer.innerHTML = allDomains.map(d =>
+      `<button class="filter-chip${activeDomainFilter===d?' active':''}" data-domain="${d}" onclick="setDomainFilter('${d}')">${d==='all'?'全部业务域':d}</button>`
+    ).join('');
+    expandBtn.style.display = 'none';
+  } else {
+    const visible = allDomains.slice(0, VISIBLE_DOMAINS);
+    const hidden = allDomains.slice(VISIBLE_DOMAINS);
+    domainContainer.innerHTML = visible.map(d =>
+      `<button class="filter-chip${activeDomainFilter===d?' active':''}" data-domain="${d}" onclick="setDomainFilter('${d}')">${d==='all'?'全部业务域':d}</button>`
+    ).join('');
+    expandBtn.style.display = '';
+    window._hiddenDomains = hidden;
+  }
+}
+
+function openDomainPopup() {
+  const chips = window._hiddenDomains || [];
+  const allDomains = ['all', ...chips];
+  document.getElementById('domainPopupChips').innerHTML = allDomains.map(d =>
+    `<button class="filter-chip${activeDomainFilter===d?' active':''}" data-domain="${d}" onclick="setDomainFilter('${d}');closeDomainPopup();">${d==='all'?'全部业务域':d}</button>`
+  ).join('');
+  document.getElementById('domainPopupOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDomainPopup() {
+  document.getElementById('domainPopupOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ── Filter + sort logic ── */
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  let list = [...ASSETS];
+  if (activeTypeFilter !== 'all') list = list.filter(a => a.type === activeTypeFilter);
+  if (activeSystemFilter !== 'all') list = list.filter(a => a.system === activeSystemFilter);
+  if (activeDbFilter !== 'all') list = list.filter(a => a.database === activeDbFilter);
+  if (activeSchemaFilter !== 'all') list = list.filter(a => a.schema === activeSchemaFilter);
+  if (activeDomainFilter !== 'all') list = list.filter(a => a.domain === activeDomainFilter);
+  if (activeCompletionFilter !== 'all') list = list.filter(a => a.completion === activeCompletionFilter);
+  if (q) {
+    list = list.filter(a =>
+      a.name.toLowerCase().includes(q) ||
+      a.desc.toLowerCase().includes(q) ||
+      a.tags.toLowerCase().includes(q) ||
+      a.owner.toLowerCase().includes(q) ||
+      a.database.toLowerCase().includes(q)
+    );
+  }
+  list.sort((a, b) => {
+    let va = a[sortField] ?? '', vb = b[sortField] ?? '';
+    if (typeof va === 'boolean') { va = va ? 1 : 0; vb = vb ? 1 : 0; }
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return list;
+}
+
+/* ── Render table ── */
+function renderTable() {
+  const list = getFiltered();
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  const count = document.getElementById('resultCount');
+
+  count.textContent = `${list.length} 个结果`;
+  empty.style.display = list.length === 0 ? 'block' : 'none';
+  tbody.closest('table').style.display = list.length === 0 ? 'none' : '';
+
+  const domainColors = { '交易':'blue','风控':'amber','清算':'green','合规':'amber','财务':'green','客户':'blue','产品':'slate','行情':'green','公共':'slate' };
+  const classColors = { '机密':'amber','内部':'blue','公开':'green' };
+
+  const compLabels = { pending:'待补全', processing:'处理中', completed:'已完成' };
+  const compColors = { pending:'amber', processing:'blue', completed:'green' };
+
+  tbody.innerHTML = list.map(a => {
+    const checked = selectedIds.has(a.id) ? ' checked' : '';
+    return `
+    <tr>
+      <td class="checkbox-cell"><input type="checkbox"${checked} onchange="toggleSelect('${a.id}',this.checked)"></td>
+      <td><span class="cell-name" onclick="openDetail('${a.id}')">${a.name}</span></td>
+      <td><span class="cell-desc" title="${a.desc.replace(/"/g,'&quot;')}">${a.desc}</span></td>
+      <td><span class="cell-mono">${a.system}</span></td>
+      <td><span class="tag tag-slate">${a.type}</span></td>
+      <td><span class="cell-mono">${a.database}</span></td>
+      <td><span class="cell-mono">${a.schema}</span></td>
+      <td><span class="tag tag-${domainColors[a.domain]||'slate'}">${a.domain}</span></td>
+      <td><span class="tag tag-${classColors[a.classification]||'slate'}">${a.classification}</span></td>
+      <td><span class="tag tag-${compColors[a.completion]||'slate'}">${compLabels[a.completion]||a.completion}</span></td>
+      <td class="cell-mono">${a.updated}</td>
+      <td><div class="action-btns"><button class="action-btn" onclick="openDetail('${a.id}')">详情</button><button class="action-btn primary" onclick="applyCompletion('${a.id}')">补全申请</button></div></td>
+    </tr>
+  `}).join('');
+
+  /* Update sort indicators */
+  document.querySelectorAll('th').forEach(th => {
+    const f = th.dataset.sort;
+    th.classList.toggle('sorted', f === sortField);
+    const arrow = th.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = f === sortField ? (sortDir === 'asc' ? '↑' : '↓') : '';
+  });
+
+  renderOpsBar(list);
+}
+
+/* ── Ops bar ── */
+function renderOpsBar(list) {
+  const total = list.length;
+  document.getElementById('opsCount').textContent = `共 ${total} 条`;
+
+  const statuses = ['all', 'pending', 'processing', 'completed'];
+  const labels = { all:'全部', pending:'待补全', processing:'处理中', completed:'已完成' };
+  document.getElementById('completionFilters').innerHTML = statuses.map(s =>
+    `<button class="filter-chip${activeCompletionFilter===s?' active':''}" onclick="setCompletionFilter('${s}')">${labels[s]}</button>`
+  ).join('');
+
+  const selCount = selectedIds.size;
+  const selSpan = document.getElementById('selectedCount');
+  const btn = document.getElementById('batchApplyBtn');
+  selSpan.style.display = selCount > 0 ? '' : 'none';
+  selSpan.textContent = `已选 ${selCount} 项`;
+  btn.disabled = selCount === 0;
+
+  document.getElementById('selectAll').checked = total > 0 && list.every(a => selectedIds.has(a.id));
+}
+
+function setCompletionFilter(v) {
+  activeCompletionFilter = v;
+  selectedIds.clear();
+  renderFilters();
+  renderTable();
+}
+
+function toggleSelectAll(on) {
+  const list = getFiltered();
+  if (on) { list.forEach(a => selectedIds.add(a.id)); }
+  else { list.forEach(a => selectedIds.delete(a.id)); }
+  renderTable();
+}
+
+function toggleSelect(id, on) {
+  if (on) { selectedIds.add(id); }
+  else { selectedIds.delete(id); }
+  renderTable();
+}
+
+function batchApplyCompletion() {
+  if (selectedIds.size === 0) return;
+  const ids = [...selectedIds];
+  ids.forEach(id => {
+    const a = ASSETS.find(x => x.id === id);
+    if (a && a.completion === 'pending') a.completion = 'processing';
+  });
+  selectedIds.clear();
+  renderFilters();
+  renderTable();
+}
+
+/* ── Detail panel ── */
+function openDetail(id) {
+  window.open('asset_detail.html?id=' + encodeURIComponent(id), '_blank');
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ── Single-row completion request ── */
+let pendingCompletionId = null;
+
+function applyCompletion(id) {
+  pendingCompletionId = id;
+  const a = ASSETS.find(x => x.id === id);
+  document.getElementById('confirmMessage').textContent =
+    `将为「${a ? a.name : id}」申请补全，系统将根据资产所属系统智能补全信息。`;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function confirmCompletion() {
+  if (pendingCompletionId) {
+    const a = ASSETS.find(x => x.id === pendingCompletionId);
+    if (a && a.completion === 'pending') a.completion = 'processing';
+    pendingCompletionId = null;
+  }
+  closeConfirm();
+  renderTable();
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  pendingCompletionId = null;
+}
+
+/* ── Existing listener ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDetail(); closeDomainPopup(); closeConfirm(); }
+});
+
+/* ── Filter handlers ── */
+function setSystemFilter(v) { activeSystemFilter = v; renderFilters(); renderTable(); }
+function setDbFilter(v) { activeDbFilter = v; renderFilters(); renderTable(); }
+function setSchemaFilter(v) { activeSchemaFilter = v; renderFilters(); renderTable(); }
+function setTypeFilter(t) {
+  activeTypeFilter = t;
+  renderFilters();
+  renderTable();
+}
+
+function setDomainFilter(d) {
+  activeDomainFilter = d;
+  renderFilters();
+  renderTable();
+}
+
+/* ── Search ── */
+document.getElementById('searchInput').addEventListener('input', renderTable);
+
+/* ── Sort ── */
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const f = th.dataset.sort;
+    if (sortField === f) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { sortField = f; sortDir = 'asc'; }
+    renderTable();
+  });
+});
+
+/* ── Init ── */
+renderFilters();
+renderTable();
+</script>
+</body>
+</html>
