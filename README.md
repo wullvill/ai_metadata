@@ -19,34 +19,7 @@
 | 前端框架 | Vue 3 + TDesign | ≥ 3.5 |
 | 前端构建 | Vite | ≥ 6.0 |
 
-## Commands
 
-### 后端
-
-```bash
-cd backend
-source .venv/bin/activate
-
-# 启动 API 服务
-uvicorn app.main:app --reload --port 8000
-
-# 启动统一服务（前端 + 后端，推荐）
-python run.py
-
-# 启动 Celery Worker (embedded)
-celery -A app.celery_app worker -P solo
-
-# 运行测试
-pytest tests/ -v --cov=app --cov-report=term
-```
-
-### 前端
-
-```bash
-cd frontend
-npm run dev    # 开发服务器
-npm run build  # 生产构建
-```
 
 ## Architecture
 

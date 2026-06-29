@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 1. 克隆项目
 git clone <repo-url> && cd ai_metadata
 
-# 2. 后端初始化
+# 2. 后端初始化  python3.12
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
@@ -60,20 +60,6 @@ npm run dev
 - 接口文档: http://localhost:8000/docs
 - 健康检查: http://localhost:8000/health
 
-## Commands
-
-```bash
-# 后端
-cd backend && source .venv/bin/activate
-uvicorn app.main:app --reload --port 8000    # 启动 API 服务
-celery -A app.celery_app worker -P solo      # 启动 Celery Worker (embedded)
-pytest tests/ -v --cov=app --cov-report=term # 运行测试
-
-# 前端
-cd frontend
-npm run dev      # 启动开发服务器 (Vite)
-npm run build    # 生产构建
-```
 
 ## Architecture
 
